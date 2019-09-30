@@ -3,7 +3,7 @@ QEの計算を便利にするツール
 ## ディレクトリ
 細かい説明はそれぞれ参照
 ### calc
-[pymatgen](http://pymatgen.org/)を使ってcifファイルの情報を読み込み、[ASE](https://wiki.fysik.dtu.dk/ase/)と[ase-sepresso](https://github.com/vossjo/ase-espresso)経由で、QEを実行する。
+[pymatgen](http://pymatgen.org/)を使ってcifファイルの情報を読み込み、[ASE](https://wiki.fysik.dtu.dk/ase/)経由で、QEを実行する。
 ### plot
 plotlyを使って以下の項目をプロットする。
 - バンド&DOSと、物理量の射影
@@ -15,10 +15,7 @@ plotlyを使って以下の項目をプロットする。
 ### config.json
 パス等の設定
 ## requirements
-- plotly
-- ASE
-- pymatgen
-- seekpath
-- ase-espresso
+- pipenv
 ## 参考
-[pyprocar](https://github.com/romerogroup/pyprocar)
+[pyprocar](https://romerogroup.github.io/pyprocar/)と[ase-espresso](https://ase-espresso.readthedocs.io/en/latest/index.html)
+現状とりあえずase-espressoのコードをそのまま使ってるのでGNUライセンス
