@@ -1,7 +1,7 @@
 {
     "_meta": {
         "hash": {
-            "sha256": "50f8d773fe49436cc450c32ed8913fcb8f5e1beb5aa54f2275862c4a08c37550"
+            "sha256": "7c3855cb801e231c17ec2c39a72987e184770d33d19d4b318fbf02d70090facd"
         },
         "pipfile-spec": 6,
         "requires": {
@@ -67,6 +67,13 @@
             ],
             "version": "==2.8"
         },
+        "importlib-metadata": {
+            "hashes": [
+                "sha256:aa18d7378b00b40847790e7c27e11673d7fed219354109d0e7b9e5b25dc3ad26",
+                "sha256:d5f18a79777f3aa179c145737780282e27b508fc8fd688cb17c7a813e8bd39af"
+            ],
+            "version": "==0.23"
+        },
         "kiwisolver": {
             "hashes": [
                 "sha256:05b5b061e09f60f56244adc885c4a7867da25ca387376b02c1efc29cc16bcd0f",
@@ -116,10 +123,17 @@
         },
         "monty": {
             "hashes": [
-                "sha256:88fc33070c473599c518c6570823298a7bcfe3e9e16c650bb5810fc6a88065f0",
-                "sha256:f2f3f43068a930573090472da572e2928e2d043708f35156d7e6ec92cfccbd0f"
+                "sha256:4f985e33cdd42bb996d9e97bbdbb05e4fea0a9f5b7436deb81771309691f296f",
+                "sha256:bb42914d85f9098bf8f46ec55d76e9414784af1fedebf1874d381522ab1769f3"
             ],
-            "version": "==2.0.6"
+            "version": "==3.0.0"
+        },
+        "more-itertools": {
+            "hashes": [
+                "sha256:409cd48d4db7052af495b09dec721011634af3753ae1ef92d2b32f73a745f832",
+                "sha256:92b8c4b06dac4f0611c0729b2f2ede52b2e1bac1ab48f089c7ddc12e26bb60c4"
+            ],
+            "version": "==7.2.0"
         },
         "mpmath": {
             "hashes": [
@@ -180,6 +194,13 @@
                 "sha256:f1b21bc5cf3dbea53d33615d1ead892dfdae9d7052fa8898083bec88be20dcd2"
             ],
             "version": "==0.25.1"
+        },
+        "path-py": {
+            "hashes": [
+                "sha256:e107a3a8834a97be2a047f4b641822afc76a2b78352610102782732e6b389aa3"
+            ],
+            "index": "pypi",
+            "version": "==12.0.1"
         },
         "plotly": {
             "hashes": [
@@ -338,6 +359,13 @@
                 "sha256:9a107b99a5393caf59c7aa3c1249c16e6879447533d0887f4336dde834c7be86"
             ],
             "version": "==1.25.6"
+        },
+        "zipp": {
+            "hashes": [
+                "sha256:3718b1cbcd963c7d4c5511a8240812904164b7f381b647143a89d3b98f9bcd8e",
+                "sha256:f06903e9f1f43b12d371004b4ac7b06ab39a44adc747266928ae6debfa7b3335"
+            ],
+            "version": "==0.6.0"
         }
     },
     "develop": {}
