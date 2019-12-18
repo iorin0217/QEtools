@@ -2,17 +2,22 @@ import pymatgen
 import json
 from ase_espresso import ASEspresso
 import pickle
+import sys
 
-ciffile =
+with open(config.json, "r") as f:
+    config = json.load(f)
+
+ciffile = (sys.argv)[1]
 structure = pymatgen.Structure.from_file(ciffile)
+structure.remove_oxidation_states()
 atoms = pymatgen.io.ase.get_atoms(structure)
 
-psdir =
+psdir = config["psdir"]
 with open(psdir, "r") as f:
-    oncv = json.load(f)
+    psdict = json.load(f)
 
-qedir =
-input_data = { < your input data > }
+qedir = config["qedir"]
+input_data =
 
 calc = ASEspresso(input_data)
 atoms.set_calculator(calc)
