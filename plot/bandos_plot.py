@@ -3,6 +3,18 @@ import plotly.offline as pltly
 import plotly.graph_objs as go
 import re
 
+'''
+python bandos_plot.py /path/to/calc/dir
+This code automatically search the result files:
+- structure.hdf5
+- fermi.hdf5
+- 
+- prefix.projwfc.pdos_atm#num(atom)_wfc#num(orb)
+- 
+This code plots:
+- band
+- BZ of it
+'''
 
 def bandos_plot():
     # use subplot
@@ -109,4 +121,34 @@ def dos_set(dos_gnu_file):
 
 
 def dos_plot():
+    with open('213p5_U.projwfc.pdos_atm#5(Pd)_wfc#3(d)','r') as dat:
+    lines = dat.readlines()
+    begin = 1
+    end = len(lines)
+    names=['total',r'$ z^2 $','xz','yz',r'$ x^2-y^2 $','xy']
+    trace=[]
+    for j in range(1,7):
+        energy = []
+        DOS = []
+        for i in range(begin, end):
+            e = float(lines[i].split()[0]) - 8.6327
+            dos = float(lines[i].split()[j])
+            energy.append(e)
+            DOS.append(dos)
+
+        trace1 = go.Scatter(
+            x = energy,
+            y = DOS,
+            name=names[j-1]
+        )
+        trace.append(trace1)
+    layout = go.Layout(
+        xaxis=dict(title = 'energy[eV]'),
+        yaxis=dict(title = 'DOS[E]'),
+    )
+
+    fig = go.Figure(data=trace, layout=layout)
+
+    ofl.plot(fig,filename='p-DOS.html', auto_open=False, include_mathjax='cdn')
+
     return None

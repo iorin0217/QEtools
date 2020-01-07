@@ -1,2 +1,5 @@
-qedir
-psdir
+{
+    "QE": "/home/CMD35/cmd35stud07/QE6.4.1/bin",
+    "RESPACK": "",
+    "ALAMODE": ""
+}
