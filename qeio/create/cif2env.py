@@ -8,11 +8,13 @@ import seekpath
 import json
 import os
 import re
+import itertools
+import copy
 
 def create_env(structure_file, extfields={"press":0}, constrains={"symm":False}):
     env = {}
     if os.path.splitext(structure_file)[1][1:] == "xml":
-        pass #env
+        pass #parse_xml_to_env
     else:
         if os.path.splitext(structure_file)[1][1:] == "cif":
             spin_calc = False
@@ -26,23 +28,33 @@ def create_env(structure_file, extfields={"press":0}, constrains={"symm":False})
                 vesta = f.readlines()
             CELLP = [i.strip().split() for i in vesta[int(vesta.index("CELLP\n"))+1:int(vesta.index("STRUC\n"))] if i.strip().split()[0]!="0"]
             STRUC = [j.strip().split() for j in vesta[int(vesta.index("STRUC\n"))+1:int(vesta.index("THERI 0\n"))] if j.strip().split()[0]!="0"]
-            VECTR = [k.strip().split() for k in vesta[int(vesta.index("VECTR\n"))+1:int(vesta.index("VECTT\n"))] if k.strip().split()[0]!="0"]
+            VECTR = [k.strip().split() for k in vesta[int(vesta.index("VECTR\n"))+1:int(vesta.index("VECTT\n"))]]
             a_vesta,b_vesta,c_vesta,alpha_vesta,beta_vesta,gamma_vesta = [float(l) for l in CELLP[0]]
-            species = [STRUC[m][1] for m in range(len(STRUC)) if i%2==0]
+            species = [STRUC[m][1] for m in range(len(STRUC)) if m%2==0]
             frac_coord = [[float(STRUC[n][4]), float(STRUC[n][5]), float(STRUC[n][6])] for n in range(len(STRUC)) if n%2==0]
             structure = Structure(Lattice.from_parameters(a_vesta,b_vesta,c_vesta,alpha_vesta,beta_vesta,gamma_vesta), species, frac_coord)
             atomic_numbers = [Element(u).number for u in species]
             atoms = set(species)
-            _atom_count = {atom : 0 for atom in atoms}
             spin_structure = {}
-            for s in range(len(VECTR)):
-                if s%2 == 0:
-                    _index = int(VECTR[s+1][0])-1
-                    atoms.discard(species[_index]) # no error when the specie not exsits
-                    atomic_numbers[_index] += _atom_count[species[_index]]*1000 # to distinguish same atoms with different spins in seekpath
-                    _atom_count[species[_index]] += 1
-                    atoms.add(species[_index]+str(_atom_count[species[_index]]))
-                    spin_structure[species[_index]+str(_atom_count[species[_index]])] = {"frac_coord": frac_coord[_index], "vec": [float(VECTR[s][1]), float(VECTR[s][2]), float(VECTR[s][3])]}
+            _atom_count_outer = {atom : 0 for atom in atoms}
+            _sep = [x for x in range(len(VECTR)) if VECTR[x][0]=="0" and VECTR[x-1][0]!="0"]
+            _start = 1
+            for _end in _sep:
+                _atom_count_inner = {atom : 0 for atom in set(species)}
+                for z in range(_start,_end):
+                    _index = int(VECTR[z][0])-1
+                    if _atom_count_inner[species[_index]] == 0:
+                        _atom_count_inner[species[_index]] += 1
+                        atoms.discard(species[_index]) # no error when the specie not exsits
+                        atomic_numbers[_index] += _atom_count_outer[species[_index]]*1000 # to distinguish same atoms with different spins in seekpath
+                        atoms.add(species[_index]+str(_atom_count_outer[species[_index]]+1))
+                        spin_structure[species[_index]+str(_atom_count_outer[species[_index]]+1)] = {"frac_coord": [frac_coord[_index]], "vec": [float(VECTR[_start-1][1]), float(VECTR[_start-1][2]), float(VECTR[_start-1][3])]}
+                    else:
+                        _atom_count_inner[species[_index]] += 1
+                        atomic_numbers[_index] += _atom_count_outer[species[_index]]*1000 # to distinguish same atoms with different spins in seekpath
+                        spin_structure[species[_index]+str(_atom_count_outer[species[_index]]+1)]["frac_coord"].append(frac_coord[_index])
+                _atom_count_outer[species[_index]] += 1
+                _start = _end+2
         env["lspinorb"] = False
         env["nspin"] = 1
         env["nbnd"] = 0
@@ -64,7 +76,9 @@ def create_env(structure_file, extfields={"press":0}, constrains={"symm":False})
             env["ecutwfc"] = max(env["ecutwfc"], pseudo["ecutwfc"])
             env["ecutrho"] = max(env["ecutrho"], pseudo["ecutwfc"]*pseudo["dual"])
         if spin_calc:
-            parallel = 
+            parallel = False
+            for i,j in itertools.permutations(spin_structure, 2):
+                parallel = parallel or np.all(np.abs(np.cross(np.array(i["vec"]),np.array(j["vec"])))<1e-5) # VESTA VECTR has 1e-5 significatn digits
             if (not env["lspinorb"]) and parallel:
                 env["nspin"] = 2
             else:
