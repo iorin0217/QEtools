@@ -4,7 +4,7 @@ from pymatgen import Structure
 from pymatgen import Lattice
 from pymatgen import Element
 from pymatgen.core.periodic_table import get_el_sp
-import seekpath
+from pymatgen.symmetry.bandstructure import HighSymmKpath
 import json
 import os
 import re
@@ -22,7 +22,7 @@ def create_env(structure_file, extfields={"press":0}, constrains={"symm":False})
             structure.remove_oxidation_states()
             atomic_numbers = [Element(str(u)).number for u in structure.species]
             atoms = set([str(v) for v in structure.species])
-        elif os.path.splitext(structure_file)[1][1:] == "vesta":
+        elif os.path.splitext(structure_file)[1][1:] == "vesta": # unsupport the occupation != 1 case
             spin_calc = True
             with open(structure_file) as f:
                 vesta = f.readlines()
@@ -47,11 +47,11 @@ def create_env(structure_file, extfields={"press":0}, constrains={"symm":False})
                         _atom_count_inner[species[_index]] += 1
                         atoms.discard(species[_index]) # no error when the specie not exsits
                         atomic_numbers[_index] += _atom_count_outer[species[_index]]*1000 # to distinguish same atoms with different spins in seekpath
-                        atoms.add(species[_index]+str(_atom_count_outer[species[_index]]+1))
+                        atoms.add(species[_index]+str(_atom_count_outer[species[_index]]+1)) # to distinguish same atoms with different spins in seekpath
                         spin_structure[species[_index]+str(_atom_count_outer[species[_index]]+1)] = {"frac_coord": [frac_coord[_index]], "vec": [float(VECTR[_start-1][1]), float(VECTR[_start-1][2]), float(VECTR[_start-1][3])]}
                     else:
                         _atom_count_inner[species[_index]] += 1
-                        atomic_numbers[_index] += _atom_count_outer[species[_index]]*1000 # to distinguish same atoms with different spins in seekpath
+                        atomic_numbers[_index] += _atom_count_outer[species[_index]]*1000
                         spin_structure[species[_index]+str(_atom_count_outer[species[_index]]+1)]["frac_coord"].append(frac_coord[_index])
                 _atom_count_outer[species[_index]] += 1
                 _start = _end+2
@@ -84,37 +84,26 @@ def create_env(structure_file, extfields={"press":0}, constrains={"symm":False})
             else:
                 env["nspin"] = 4
                 env["time_reversal"] = False
+        '''
+        seekpath collapses coordinates for the spin structures
+        https://github.com/giovannipizzi/seekpath/issues/16
+        https://github.com/giovannipizzi/seekpath/blob/fix_transformation_matrix/seekpath/hpkot/__init__.py#L181
+        https://atztogo.github.io/spglib/dataset.html#dataset-origin-shift-and-transformation
+        import seekpath
         skp = seekpath.get_explicit_k_path((structure.lattice.matrix, structure.frac_coords, atomic_numbers), with_time_reversal=env["time_reversal"], reference_distance=0.025) #setting
         env["avec"] = skp["primitive_lattice"]
         env["bvec"] = skp["reciprocal_primitive_lattice"]
-        #env["atom"] = [str(get_el_sp(iat)) for iat in skp["primitive_types"]]
-        #env["nat"] = len(skp["primitive_types"])
-        #env[atom]["starting_magnetization"]
-        #typ(mag) → ntyp?
-        #env["pos"] = skp["primitive_positions"]
-        env["nk"] = np.round(np.linalg.norm(bvec, axis=0)/ 0.2) #setting
+        env["nat"] = len(skp["primitive_types"])
+        duplicated = set([atomnum%1000 for atomnum in skp["primitive_types"] if atomnum>1000])
+        env["atom"] = [str(get_el_sp(atomnum%1000))+f"{atomnum//1000+1}" if atomnum%1000 in duplicated else str(get_el_sp(atomnum)) for atomnum in skp["primitive_types"]]
+        env["ntyp"] = len(set(env["atom"]))
+        env["pos"] = skp["primitive_positions"]
+        env[atom]["starting_magnetization"] = 
+        env["kpath"] = 
+        '''
+        env["nk"] = np.round(np.linalg.norm(bvec, axis=0)/ 0.2) # setting
         #nks
         #kpath
-        for ipath in range(len(skp["path"])):
-            start = skp["explicit_segments"][ipath][0]
-            final = skp["explicit_segments"][ipath][1] - 1
-        print("%5d %8s %10.5f %10.5f %10.5f %8s %10.5f %10.5f %10.5f" % (
-            final - start + 1,
-            skp["explicit_kpoints_labels"][start],
-            skp["explicit_kpoints_rel"][start][0],
-            skp["explicit_kpoints_rel"][start][1],
-            skp["explicit_kpoints_rel"][start][2],
-            skp["explicit_kpoints_labels"][final],
-            skp["explicit_kpoints_rel"][final][0],
-            skp["explicit_kpoints_rel"][final][1],
-            skp["explicit_kpoints_rel"][final][2]))
-        print(len(skp["explicit_kpoints_rel"]), file=f)
-        for ik in range(len(skp["explicit_kpoints_rel"])):
-            print(" %f %f %f 1.0" % (
-                skp["explicit_kpoints_rel"][ik][0],
-                skp["explicit_kpoints_rel"][ik][1],
-                skp["explicit_kpoints_rel"][ik][2]),
-                file=f)
 
         #press
 
