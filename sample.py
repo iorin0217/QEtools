@@ -77,18 +77,17 @@ before
 # %%
 after
 # %%
-(before.T @ skp["primitive_transformation_matrix"]).T
-# %%
-np.dot(after, np.linalg.inv(before))
+np.dot(np.linalg.inv(
+    before.T @ skp["primitive_transformation_matrix"]), after.T)
 # %%
 (trans_r @ abc.T @ np.linalg.inv(trans_f)).T
 # %%
 np.linalg.inv(trans_r @ abc.T) @ (
-    after.T @ skp["primitive_positions"][3] - trans_r @ abc.T @ structure.frac_coords[3])
+    after.T @ skp["primitive_positions"][1] - trans_r @ abc.T @ structure.frac_coords[1])
 # %%
-spin_ini = np.array([-2.0, 4.0, -2.0])
+spin_ini = np.array([0, 0.5, -1])
 # %%
-trans_r @ abc.T @ spin_ini
+np.linalg.inv(after.T) @ trans_r @ abc.T @ spin_ini
 # %%
 structure_before = Structure(before, species*3, dataset["std_positions"])
 # %%
@@ -117,6 +116,28 @@ dataset_cif = spglib.get_symmetry_dataset((structure_cif.lattice.matrix, structu
 
 
 # %%
-structure_cif
+spin_structure
+
+# %%
+atoms
+
+# %%
+skp["primitive_positions"][2]
+
+# %%
+structure.frac_coords[2]
+
+# %%
+skp["primitive_positions"]
+
+# %%
+np.linalg.norm(abc.T @ (np.array([2, -4, 2])/np.linalg.norm(abc, axis=1)))
+
+
+# %%
+abc.T @ np.array([1, 1, 1]) @ np.array([0, 0, 1])
+
+# %%
+np.array([2, 2, 2])/np.array([1, 1, 1])
 
 # %%
