@@ -133,8 +133,22 @@ def create_env(structure_file, extfields={"press": 0}, constraints={"symm": Fals
             env[atom]["starting_magnetization"] = norm
             env[atom]["angle1"] = np.rad2deg(np.arccos(vec[2]/norm))
             env[atom]["angle2"] = np.rad2deg(np.arctan(vec[1]/vec[0]))
-    env["kpath"] =
-    env["nks"] = np.round(np.linalg.norm(bvec, axis=0) / 0.2)
+    env["kpath"] = skp["explicit_kpoints_rel"]
+    env["klabel"] = skp["point_coords"]
+    env["bandpath"] = skp["explicit_kpoints_linearcoord"]
+    env["kticks"] = {}
+    for ipath in range(len(skp["path"])):
+        _start = skp["explicit_segments"][ipath][0]
+        _last = skp["explicit_segments"][ipath-1][1] - 1
+        if _start == _last+1:
+            env["kticks"][(skp["explicit_kpoints_linearcoord"]
+                           [_start]+skp["explicit_kpoints_linearcoord"][_last])/2] = skp["path"][ipath-1][1]+"|"+skp["path"][ipath][0]
+        else:
+            env["kticks"][skp["explicit_kpoints_linearcoord"]
+                          [_start]] = skp["path"][ipath][0]
+    env["kticks"][skp["explicit_kpoints_linearcoord"][-1]
+                  ] = skp["path"][-1][1]  # retrieve the final point
+    env["nk"] = np.round(np.linalg.norm(env["bvec"], axis=0) / 0.2)
 
     # extfields, constraints
 
