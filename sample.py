@@ -2,6 +2,7 @@
 import spglib
 import numpy as np
 from pymatgen.io.cif import CifParser
+from pymatgen.io.cif import CifWriter
 from pymatgen import Structure
 from pymatgen import Lattice
 from pymatgen import Element
@@ -62,25 +63,60 @@ for _end in _sep:
 # %%
 skp = seekpath.get_explicit_k_path((structure.lattice.matrix, structure.frac_coords,
                                     atomic_numbers), with_time_reversal=True, reference_distance=0.025)
-np.linalg.norm(np.dot(skp["primitive_positions"],
-                      skp["primitive_lattice"]), axis=1)
-# %%
-structure.get_neighbors_in_shell([0, 0, 0], 13.12, 0.01)
-# %%
 dataset = spglib.get_symmetry_dataset((structure.lattice.matrix, structure.frac_coords,
                                        atomic_numbers))
 trans_f = dataset["transformation_matrix"]
 trans_r = dataset["std_rotation_matrix"]
 abc = structure.lattice.matrix
+after = skp["primitive_lattice"]
+before = dataset["std_lattice"]
 # %%
 abc
 # %%
-skp["primitive_lattice"]
+before
 # %%
-np.dot(trans_r, (np.dot(abc.T, np.linalg.inv(trans_f)).T)[0])
+after
+# %%
+(before.T @ skp["primitive_transformation_matrix"]).T
+# %%
+np.dot(after, np.linalg.inv(before))
+# %%
+(trans_r @ abc.T @ np.linalg.inv(trans_f)).T
+# %%
+np.linalg.inv(trans_r @ abc.T) @ (
+    after.T @ skp["primitive_positions"][3] - trans_r @ abc.T @ structure.frac_coords[3])
+# %%
+spin_ini = np.array([-2.0, 4.0, -2.0])
+# %%
+trans_r @ abc.T @ spin_ini
+# %%
+structure_before = Structure(before, species*3, dataset["std_positions"])
+# %%
+CifWriter(structure_before).write_file(
+    "/home/CMD35/cmd35stud07/experiments/AgCrSe2_afm/AgCrSe2_spg.cif")
+# %%
+np.linalg.norm(np.dot(skp["primitive_positions"],
+                      skp["primitive_lattice"]), axis=1)
+structure.get_neighbors_in_shell([0, 0, 0], 13.12, 0.01)
 # %%
 structure.make_supercell([[2, 0, 0], [0, 2, 0], [0, 0, 2]])
 abc_super = structure.lattice.matrix
 trans_l = abc[0]+abc[1]+abc[2]
 super_structure = np.dot(structure.frac_coords, abc_super)-trans_l/2
 np.linalg.norm(super_structure)
+# %%
+structure_cif = CifParser("/home/CMD35/cmd35stud07/experiments/AgCrSe2_afm/AgCrSe2_R3m.cif").get_structures(
+    primitive=False)[0]  # when we use mcif, primitive=True
+structure_cif.remove_oxidation_states()
+atomic_numbers_cif = [
+    Element(str(u)).number for u in structure_cif.species]
+atomic_numbers_cif = [24, 24, 24, 24, 47, 47,
+                      47, 47, 34, 34, 34, 34, 34, 34, 34, 34]
+dataset_cif = spglib.get_symmetry_dataset((structure_cif.lattice.matrix, structure_cif.frac_coords,
+                                           atomic_numbers_cif))
+
+
+# %%
+structure_cif
+
+# %%
