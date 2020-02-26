@@ -1,3 +1,4 @@
+# this code will be changed to Env class
 import numpy as np
 from pymatgen.io.cif import CifParser
 from pymatgen import Structure
@@ -12,7 +13,7 @@ import re
 import itertools
 
 
-def create_env(structure_file, extfields={"press": 0}, constraints={"symm": False}):
+def create_env(structure_file, variables, extfields={"press": 0}, constraints={"symm": False}):
     # unsupport the occupation != 1 case
     # we will deal with mcif: primitive=True
     env = {}
@@ -84,14 +85,16 @@ def create_env(structure_file, extfields={"press": 0}, constraints={"symm": Fals
         elements = json.load(f)
     for atom in atoms:
         element = re.match(r"\D+", atom).group()  # double count exists
-        SOC = elements[element]["params"]["SOC"]
+        SOC = elements[element]["properties"]["SOC"]
+        Hubbard = elements[element]["properties"].get("Hubbard")
         if SOC == "fr":
             env["lspinorb"] = True
             env["nspin"] = 4  # to specify the quantization axis
-            env["time_reversal"] = False
+        if Hubbard:
+            env["lda_plus_u"] = True
         pseudo = elements[element]["pseudopotential"]["PBE"][SOC]["ONCV"]
-        env[atom] = {"pseudo": pseudo, "Hubbard": elements[element]
-                     ["params"]["Hubbard"], "starting_magnetization": 0}
+        env[atom] = {"pseudo": pseudo, "Hubbard": Hubbard,
+                     "starting_magnetization": 0}
         env["nbnd"] += pseudo["nwfc"]
         env["ecutwfc"] = max(env["ecutwfc"], pseudo["ecutwfc"])
         env["ecutrho"] = max(
@@ -108,15 +111,13 @@ def create_env(structure_file, extfields={"press": 0}, constraints={"symm": Fals
             env["time_reversal"] = False
     # set structural configuration
     skp = seekpath.get_explicit_k_path((structure.lattice.matrix, structure.frac_coords, atomic_numbers),
-                                       with_time_reversal=env["time_reversal"], reference_distance=0.025)
+                                       with_time_reversal=env["time_reversal"], reference_distance=variables["reference_distance"])
     env["avec"] = skp["primitive_lattice"]
     env["bvec"] = skp["reciprocal_primitive_lattice"]
-    env["nat"] = len(skp["primitive_types"])
     duplicated = set(
         [atomnum % 1000 for atomnum in skp["primitive_types"] if atomnum > 1000])
     env["atom"] = [str(get_el_sp(atomnum % 1000))+f"{atomnum//1000+1}" if atomnum %
                    1000 in duplicated else str(get_el_sp(atomnum)) for atomnum in skp["primitive_types"]]
-    env["ntyp"] = len(set(env["atom"]))
     env["pos"] = skp["primitive_positions"]
     if spin_calc:
         # map spin structure from input to seekpath basis
@@ -148,7 +149,8 @@ def create_env(structure_file, extfields={"press": 0}, constraints={"symm": Fals
                           [_start]] = skp["path"][ipath][0]
     env["kticks"][skp["explicit_kpoints_linearcoord"][-1]
                   ] = skp["path"][-1][1]  # retrieve the final point
-    env["nk"] = np.round(np.linalg.norm(env["bvec"], axis=0) / 0.2)
+    env["nk"] = np.round(np.linalg.norm(
+        env["bvec"], axis=0) / variables["dk_grid"])
 
     # extfields, constraints
 

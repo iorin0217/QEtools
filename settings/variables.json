@@ -1,41 +1,3 @@
-{
-    "dft.startingwfc": [
-        "atomic+random"
-    ],
-    "dft.diagonalization": [
-        "david"
-    ],
-    "dft_energy_range": 50,
-    "nkpt": [
-        6,
-        6,
-        6
-    ],
-    "ngkpt": [
-        6,
-        6,
-        6
-    ],
-    "screen.nkpt": [
-        2,
-        2,
-        2
-    ],
-    "screen.nbands": 2000,
-    "ecut": 120,
-    "core_offset": True,
-    "metal": True,
-    "occopt": 3,
-    "degauss": 0.004,
-    "fband": 0.65,
-    "toldfe": 1.7e-6,
-    "tolwfr": 1.1e-16,
-    "nstep": 600,
-    "mixing": 0.1,
-    "mixing_ndim": 20,
-    "etol": 1.5e-7,
-}
-
 # Some useful constants
 from numpy import pi
 
@@ -127,3 +89,4 @@ assume_isolated
 
 It is the convergence threshold for the force to an ionic minimization.
  Any force for all elements must be less than this value (3.8E-4 Ry/Bohr = 0.01 eV/Å ).
+

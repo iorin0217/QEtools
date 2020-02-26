@@ -1,7 +1,9 @@
 {
     "schedular": "",
+    "QEtools": "/home/CMD35/cmd35stud07/QEtools",
     "QE": "/home/CMD35/cmd35stud07/QE6.4.1/bin",
     "$schema": "",
+    "pseudo_dir": "settings/pseudos",
     "VESTA": "",
     "FermiSurfer": "",
     "RESPACK": "",
