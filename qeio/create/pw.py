@@ -2,12 +2,13 @@
 
 
 def create_pw_in(path, env, variables, calculation="scf"):
-    # list up atom types
-    atom_types = list(set(env['atom']))
+    # useful
+    atom_types = list(set(env['atoms']))
+    nat = len(env['atoms'])
     # &CONTROL (no "/")
     control = ["&CONTROL", f"calculation = '{calculation}'", f"pseudo_dir = '{env["psdir"]}'"]
     # &SYSTEM (no "/")
-    systems = ["&SYSTEM", "ibrav = 0", f"nat = {len(env['atom'])}", f"ntyp = {len(atom_types)}",
+    systems = ["&SYSTEM", "ibrav = 0", f"nat = {nat}", f"ntyp = {len(atom_types)}",
                f"ecutwfc = {env['ecutwfc']}", f"ecutrho = {env['ecutrho']}", f"occupations = {variables['occupations']}"]
     spin = []
     if env['nspin'] == 2:
@@ -27,14 +28,15 @@ def create_pw_in(path, env, variables, calculation="scf"):
                                                                        atom in enumerate(atom_types) if env[atom]['Hubbard_U']]
     SSSH = systems + spin + soc + hubbard
     # &ELECTRONS (no "/")
-    electrons = ["&ELECTRONS", f"conv_thr = {float(len(env['atom']))*variables['threshold']}",
+    electrons = ["&ELECTRONS", f"conv_thr = {float(nat)*variables['threshold']}",
                  f"mixing_beta = {variables['mixing_beta']}", f"diagonalization = {variables['diagonalization']}"]
     # CELL_PARAMETERS, ATOMIC_SPECIES, ATOMIC_POSITIONS
     cell_parameters = ["CELL_PARAMETERS angstrom"] + \
-        [f"{vec[0]} {vec[1]} {vec[2]}" for vec in avec]
-    atomic_species = ["ATOMIC_SPECIES"] + [f"{ityp} {pymatgen.Element(ityp).atomic_mass} {oncv[str(ityp)]["filename"]}" for ityp in typ]
+        [f"{vec[0]} {vec[1]} {vec[2]}" for vec in env["avec"]]
+    atomic_species = ["ATOMIC_SPECIES"] + \
+        [f"{atom} -1 {env[atom]['pseudo']}" for atom in atom_types]
     atomic_positions = ["ATOMIC_POSITIONS crystal"] + [
-        f"{atom[iat]} {pos[iat][0]} {pos[iat][1]} {pos[iat][2]}" for iat in range(nat)]
+        f"{atoms[i]} {env['pos'][i][0]} {env['pos'][i][1]} {env['pos'][i][2]}" for i in range(nat)]
     CAA = cell_parameters + atomic_species + atomic_positions
 
     if calculation == "scf":

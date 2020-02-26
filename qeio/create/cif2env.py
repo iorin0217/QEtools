@@ -25,7 +25,7 @@ def create_env(structure_file, variables, extfields={"press": 0}, constraints={"
         structure.remove_oxidation_states()
         atomic_numbers = [
             Element(str(u)).number for u in structure.species]
-        atoms = set([str(v) for v in structure.species])
+        atom_types = set([str(v) for v in structure.species])
     elif os.path.splitext(structure_file)[1][1:] == "vesta":
         # read vesta
         spin_calc = True
@@ -45,11 +45,11 @@ def create_env(structure_file, variables, extfields={"press": 0}, constraints={"
         structure = Structure(Lattice.from_parameters(
             a_vesta, b_vesta, c_vesta, alpha_vesta, beta_vesta, gamma_vesta), species, frac_coord)
         atomic_numbers = [Element(u).number for u in species]
-        atoms = set(species)
+        atom_types = set(species)
         # organize spin_structure
         # frac_coodいらないかも
         spin_structure = {}
-        _atom_count_outer = {atom: 0 for atom in atoms}
+        _atom_count_outer = {atom: 0 for atom in atom_types}
         _sep = [x for x in range(len(VECTR)) if VECTR[x]
                 [0] == "0" and VECTR[x-1][0] != "0"]
         _start = 1
@@ -60,10 +60,10 @@ def create_env(structure_file, variables, extfields={"press": 0}, constraints={"
                 if _atom_count_inner[species[_index]] == 0:
                     _atom_count_inner[species[_index]] += 1
                     # no error if the specie not exsits
-                    atoms.discard(species[_index])
-                    # to distinguish same atoms with different spins in seekpath
+                    atom_types.discard(species[_index])
+                    # to distinguish same atom_types with different spins in seekpath
                     atomic_numbers[_index] += _atom_count_outer[species[_index]]*1000
-                    atoms.add(
+                    atom_types.add(
                         species[_index]+str(_atom_count_outer[species[_index]]+1))
                     spin_structure[species[_index]+str(_atom_count_outer[species[_index]]+1)] = {"frac_coord": [frac_coord[_index]], "vec": [
                         float(VECTR[_start-1][1]), float(VECTR[_start-1][2]), float(VECTR[_start-1][3])]}
@@ -83,7 +83,7 @@ def create_env(structure_file, variables, extfields={"press": 0}, constraints={"
     env["time_reversal"] = True
     with open("../../settings/elements.json", "r") as f:
         elements = json.load(f)
-    for atom in atoms:
+    for atom in atom_types:
         element = re.match(r"\D+", atom).group()  # double count exists
         SOC = elements[element]["properties"]["SOC"]
         Hubbard = elements[element]["properties"].get("Hubbard")
@@ -116,8 +116,8 @@ def create_env(structure_file, variables, extfields={"press": 0}, constraints={"
     env["bvec"] = skp["reciprocal_primitive_lattice"]
     duplicated = set(
         [atomnum % 1000 for atomnum in skp["primitive_types"] if atomnum > 1000])
-    env["atom"] = [str(get_el_sp(atomnum % 1000))+f"{atomnum//1000+1}" if atomnum %
-                   1000 in duplicated else str(get_el_sp(atomnum)) for atomnum in skp["primitive_types"]]
+    env["atoms"] = [str(get_el_sp(atomnum % 1000))+f"{atomnum//1000+1}" if atomnum %
+                    1000 in duplicated else str(get_el_sp(atomnum)) for atomnum in skp["primitive_types"]]
     env["pos"] = skp["primitive_positions"]
     if spin_calc:
         # map spin structure from input to seekpath basis
