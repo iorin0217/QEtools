@@ -14,11 +14,11 @@ def create_pw_in(path, env, variables, calculation="scf"):
     if env['nspin'] == 2:
         spin = ["nspin = 2"] + \
             [f"starting_magnetization({i+1}) = {env[atom]['starting_magnetization']}" for i,
-             atom in enumerate(atom_types) if env[atom]['starting_magnetization'] != 0]
+             atom in enumerate(atom_types) if np.abs(env[atom]['starting_magnetization']) > 1e-3]  # QE has this resolution
     elif env['nspin'] == 4:
         spin = ["noncolin = .true."] + \
             [f"starting_magnetization({i+1}) = {env[atom]['starting_magnetization']}, angle1({i+1}) = {env[atom]['angle1']}, angle2({i+1}) = {env[atom]['angle2']}" for i,
-             atom in enumerate(atom_types) if env[atom]['starting_magnetization'] != 0]
+             atom in enumerate(atom_types) if np.abs(env[atom]['starting_magnetization']) > 1e-3]
     soc = []
     if env['lspinorb']:
         soc = ["lspinorb = .true."]

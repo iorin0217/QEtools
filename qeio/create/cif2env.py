@@ -19,7 +19,7 @@ def create_env(structure_file, variables, extfields={"press": 0}, constraints={"
     env = {}
     if os.path.splitext(structure_file)[1][1:] == "cif":
         # read cif
-        spin_calc = False
+        spin_structure = None
         structure = CifParser(structure_file).get_structures(
             primitive=False)[0]
         structure.remove_oxidation_states()
@@ -28,7 +28,7 @@ def create_env(structure_file, variables, extfields={"press": 0}, constraints={"
         atom_types = set([str(v) for v in structure.species])
     elif os.path.splitext(structure_file)[1][1:] == "vesta":
         # read vesta
-        spin_calc = True
+        spin_structure = {}
         with open(structure_file) as f:
             vesta = f.readlines()
         CELLP = [i.strip().split() for i in vesta[int(vesta.index(
@@ -40,15 +40,14 @@ def create_env(structure_file, variables, extfields={"press": 0}, constraints={"
         a_vesta, b_vesta, c_vesta, alpha_vesta, beta_vesta, gamma_vesta = [
             float(l) for l in CELLP[0]]
         species = [STRUC[m][1] for m in range(len(STRUC)) if m % 2 == 0]
-        frac_coord = [[float(STRUC[n][4]), float(STRUC[n][5]), float(
-            STRUC[n][6])] for n in range(len(STRUC)) if n % 2 == 0]
+        frac_coord = [np.array([float(STRUC[n][4]), float(STRUC[n][5]), float(
+            STRUC[n][6])]) for n in range(len(STRUC)) if n % 2 == 0]
         structure = Structure(Lattice.from_parameters(
             a_vesta, b_vesta, c_vesta, alpha_vesta, beta_vesta, gamma_vesta), species, frac_coord)
         atomic_numbers = [Element(u).number for u in species]
         atom_types = set(species)
         # organize spin_structure
         # frac_coodいらないかも
-        spin_structure = {}
         _atom_count_outer = {atom: 0 for atom in atom_types}
         _sep = [x for x in range(len(VECTR)) if VECTR[x]
                 [0] == "0" and VECTR[x-1][0] != "0"]
@@ -65,8 +64,8 @@ def create_env(structure_file, variables, extfields={"press": 0}, constraints={"
                     atomic_numbers[_index] += _atom_count_outer[species[_index]]*1000
                     atom_types.add(
                         species[_index]+str(_atom_count_outer[species[_index]]+1))
-                    spin_structure[species[_index]+str(_atom_count_outer[species[_index]]+1)] = {"frac_coord": [frac_coord[_index]], "vec": [
-                        float(VECTR[_start-1][1]), float(VECTR[_start-1][2]), float(VECTR[_start-1][3])]}
+                    spin_structure[species[_index]+str(_atom_count_outer[species[_index]]+1)] = {"frac_coord": [frac_coord[_index]], "vec": np.array([
+                        float(VECTR[_start-1][1]), float(VECTR[_start-1][2]), float(VECTR[_start-1][3])])}
                 else:
                     _atom_count_inner[species[_index]] += 1
                     atomic_numbers[_index] += _atom_count_outer[species[_index]]*1000
@@ -74,6 +73,8 @@ def create_env(structure_file, variables, extfields={"press": 0}, constraints={"
                         _atom_count_outer[species[_index]]+1)]["frac_coord"].append(frac_coord[_index])
             _atom_count_outer[species[_index]] += 1
             _start = _end+2
+    env["raw_crystal"] = structure
+    env["raw_spin"] = spin_structure
     # set elemental configuration
     env["lspinorb"] = False
     env["nspin"] = 1
@@ -99,11 +100,11 @@ def create_env(structure_file, variables, extfields={"press": 0}, constraints={"
         env["ecutwfc"] = max(env["ecutwfc"], pseudo["ecutwfc"])
         env["ecutrho"] = max(
             env["ecutrho"], pseudo["ecutwfc"]*pseudo["dual"])
-    if spin_calc:
+    if spin_structure:
         parallel = False
         for i, j in itertools.permutations(spin_structure, 2):
-            parallel = parallel or np.all(np.abs(np.cross(np.array(i["vec"]), np.array(
-                j["vec"]))) < 1e-5)  # VESTA VECTR has 1e-5 significatn digits
+            parallel = parallel or np.all(np.abs(np.cross(i["vec"],
+                                                          j["vec"])) < 1e-5)  # VESTA VECTR has 1e-5 significatn digits
         if (not env["lspinorb"]) and parallel:
             env["nspin"] = 2
         else:
@@ -119,7 +120,10 @@ def create_env(structure_file, variables, extfields={"press": 0}, constraints={"
     env["atoms"] = [str(get_el_sp(atomnum % 1000))+f"{atomnum//1000+1}" if atomnum %
                     1000 in duplicated else str(get_el_sp(atomnum)) for atomnum in skp["primitive_types"]]
     env["pos"] = skp["primitive_positions"]
-    if spin_calc:
+    # easy to access the structual property
+    env["crystal"] = Structure(Lattice(env["avec"]), env["atoms"], env["pos"])
+    env["spin"] = None
+    if spin_structure:
         # map spin structure from input to seekpath basis
         spg = spglib.get_symmetry_dataset(
             (structure.lattice.matrix, structure.frac_coords, atomic_numbers))
@@ -128,12 +132,24 @@ def create_env(structure_file, variables, extfields={"press": 0}, constraints={"
         mapping = np.linalg.inv(
             env["avec"].T) @ spg["std_rotation_matrix"] @ structure.lattice.matrix.T @ permutation
         for atom in spin_structure:
-            vec = env["avec"].T @ mapping @ np.array(
-                spin_structure[atom]["vec"])/np.linalg.norm(env["avec"], axis=1)
+            vec = env["avec"].T @ mapping @
+            spin_structure[atom]["vec"]/np.linalg.norm(env["avec"], axis=1)
+            env["spin"].update({atom: {"frac_coord": [
+                               mapping @ frac for frac in spin_structure[atom]["frac_coord"]], "vec": vec}})
             norm = np.linalg.norm(vec)
-            env[atom]["starting_magnetization"] = norm
-            env[atom]["angle1"] = np.rad2deg(np.arccos(vec[2]/norm))
-            env[atom]["angle2"] = np.rad2deg(np.arctan(vec[1]/vec[0]))
+            if env["nspin"] == 2:
+                if np.abs(vec[2]) > 1e-5:
+                    pn_flag = np.sign(vec[2])
+                else:
+                    pn_flag = np.sign(vec[1])
+                env[atom]["starting_magnetization"] = norm * pn_flag
+            if env["nspin"] == 4:
+                env[atom]["starting_magnetization"] = norm
+                env[atom].update({
+                    "angle1": np.rad2deg(np.arccos(vec[2]/norm))})
+                env[atom].update({
+                    "angle2": np.rad2deg(np.arctan(vec[1]/vec[0]))})
+    # set reciprocal configuration
     env["kpath"] = skp["explicit_kpoints_rel"]
     env["klabel"] = skp["point_coords"]
     env["bandpath"] = skp["explicit_kpoints_linearcoord"]
@@ -153,5 +169,6 @@ def create_env(structure_file, variables, extfields={"press": 0}, constraints={"
         env["bvec"], axis=0) / variables["dk_grid"])
 
     # extfields, constraints
+    # hdf5
 
     return env
