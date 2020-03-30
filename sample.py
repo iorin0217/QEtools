@@ -222,10 +222,10 @@ def create_env(structure_file, variables, extfields={"press": 0}, constraints={"
     env["lspinorb"] = False
     env["nspin"] = 1
     env["lda_plus_u"] = False
-    env["nbnd"] = 0
     env["ecutwfc"] = 0
     env["ecutrho"] = 0
     env["time_reversal"] = True
+    nwfc = {}
     with open("/home/CMD35/cmd35stud07/QEtools/settings/elements.json", "r") as f:
         elements = json.load(f)
     for atom in atom_types:
@@ -241,10 +241,10 @@ def create_env(structure_file, variables, extfields={"press": 0}, constraints={"
         pseudo = elements[element]["pseudopotential"][variables["functional"]][SOC][pstype]
         env[atom] = {"pseudofile": pseudo["filename"], "Hubbard": Hubbard,
                      "starting_magnetization": 0}
-        env["nbnd"] += pseudo["nwfc"]
         env["ecutwfc"] = max(env["ecutwfc"], pseudo["cutoff"])
         env["ecutrho"] = max(
             env["ecutrho"], pseudo["cutoff"]*pseudo["dual"])
+        nwfc[atom] = int(pseudo["nwfc"])
     if spin_structure:
         parallel = False
         for i, j in itertools.permutations(spin_structure, 2):
@@ -264,6 +264,7 @@ def create_env(structure_file, variables, extfields={"press": 0}, constraints={"
         [atomnum % 1000 for atomnum in skp["primitive_types"] if atomnum > 1000])
     env["atoms"] = [str(get_el_sp(atomnum % 1000))+f"{atomnum//1000+1}" if atomnum %
                     1000 in duplicated else str(get_el_sp(atomnum)) for atomnum in skp["primitive_types"]]
+    env["nbnd"] = sum([nwfc[atom] for atom in env["atoms"]])
     env["pos"] = skp["primitive_positions"]
     # easy to access the structual property
     env["crystal"] = Structure(Lattice(env["avec"]), env["atoms"], env["pos"])
@@ -391,12 +392,13 @@ def create_pw_in(path, env, variables, calculation="scf"):
     eval(
         f"print(*{calculation}_in, sep={tmp}, end={tmp}, file=open('{path}/{calculation}.in','w'))")
 
+    # print(env['avec'])
 # %%
 
 
 def create_projwfc_in(path, efermi, emin=-5, emax=5, deltae=0.01):
     projwfc_temp = [
-        "&PROJWFC", f"emin = {efermi+emin}", f"{efrmi+emax}", f"deltae = {deltae}", "/"]
+        "&PROJWFC", f"emin = {efermi+emin}", f"emax = {efrmi+emax}", f"deltae = {deltae}", "/"]
     print(*projwfc_temp, sep="\n", end="\n",
           file=open(f"{path}/projwfc.in", "w"))
 
@@ -404,7 +406,7 @@ def create_projwfc_in(path, efermi, emin=-5, emax=5, deltae=0.01):
 
 
 def create_band_in(path, nspin=1, plot_2d=".false."):
-    band_temp = ["&BANDS", f"{plot_2d}"]
+    band_temp = ["&BANDS", f"plot_2d={plot_2d}"]
     if nspin == 1:
         band_temp += ["filband = 'band.out'", "/"]
         print(*band_temp, sep="\n", end="\n",
@@ -426,7 +428,7 @@ def create_band_in(path, nspin=1, plot_2d=".false."):
 
 def create_dos_in(path, efermi, emin=-10, emax=10, deltae=0.05):
     dos_temp = ["&DOS", f"emin = {efermi+emin}",
-                f"{efrmi+emax}", f"deltae = {deltae}", "/"]
+                f"emax = {efrmi+emax}", f"deltae = {deltae}", "/"]
     print(*dos_temp, sep="\n", end="\n", file=open(f"{path}/dos.in", "w"))
 
 
@@ -444,5 +446,5 @@ create_band_in(path)
 
 # %%
 efermi = 0
-dos_in = create_dos_in(path, efermi)
-proj_in = create_projwfc_in(path, efermi)
+create_dos_in(path, efermi)
+create_projwfc_in(path, efermi)

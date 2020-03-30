@@ -83,6 +83,7 @@ def create_env(structure_file, variables, extfields={"press": 0}, constraints={"
     env["ecutwfc"] = 0
     env["ecutrho"] = 0
     env["time_reversal"] = True
+    _nwfc = {}
     with open("../../settings/elements.json", "r") as f:
         elements = json.load(f)
     for atom in atom_types:
@@ -102,6 +103,7 @@ def create_env(structure_file, variables, extfields={"press": 0}, constraints={"
         env["ecutwfc"] = max(env["ecutwfc"], pseudo["cutoff"])
         env["ecutrho"] = max(
             env["ecutrho"], pseudo["cutoff"]*pseudo["dual"])
+        _nwfc[atom] = int(pseudo["nwfc"])
     if spin_structure:
         parallel = False
         for i, j in itertools.permutations(spin_structure, 2):
@@ -121,6 +123,7 @@ def create_env(structure_file, variables, extfields={"press": 0}, constraints={"
         [atomnum % 1000 for atomnum in skp["primitive_types"] if atomnum > 1000])
     env["atoms"] = [str(get_el_sp(atomnum % 1000))+f"{atomnum//1000+1}" if atomnum %
                     1000 in duplicated else str(get_el_sp(atomnum)) for atomnum in skp["primitive_types"]]
+    env["nbnd"] = sum([_nwfc[atom] for atom in env["atoms"]])
     env["pos"] = skp["primitive_positions"]
     # easy to access the structual property
     env["crystal"] = Structure(Lattice(env["avec"]), env["atoms"], env["pos"])

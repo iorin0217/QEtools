@@ -1,0 +1,25 @@
+The first-principles calculation based on density functional theory are performed by using
+the Quantum ESPRESSO program package [1],
+which employs plane waves and psudopotentials
+to describe the Kohn–Sham orbitals and the
+crystalline potential, respectively. The planewave cutoff for a wave function is set to 35 Ry.
+We employ the GGA-PBE functional [2]. The
+ultrasoft pseudopotential [3] 1 and the dataset
+of projector-augmented wave [4] 2 used in this
+study are obtained in Standard Solid State Pseudopotentials [5]. They are originary included
+in the New Soft-Accurate NLCC pseudopotential library [6] and Pslibrary 0.3.1 [7]. We set
+the k-point grids of Brillouin-zone integrations
+with the optimized tetrahedron method [8] for
+the charge density of states of Si and Ba2RuO4
+to 10×10×10 and 8×8×11, respectively.
+Figure 1 shows the band structure of Si. Si has
+the band gap, so the fermi surface is not appeared. (See Fig. 2) And, density of states　is shown in Fig. 3 Figure 4 shows the band
+structure of Ba2RuO4. The pdos calculation of
+Ba2RuO4 was very heavy, and the result was not
+saved for ”No space left on device.” at my ECCS
+machine. Figure 5 shows the crystal structure of
+the Si 3 and Ba2RuO4
+4 which was downloaded
+from Crystallographic Open Database[11] , and
+Materials Project[12] respectively. Both of them
+were in the high pressure phase structure.
