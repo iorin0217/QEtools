@@ -132,8 +132,8 @@ def create_env(structure_file, variables, extfields={"press": 0}, constraints={"
         mapping = np.linalg.inv(
             env["avec"].T) @ spg["std_rotation_matrix"] @ structure.lattice.matrix.T @ permutation
         for atom in spin_structure:
-            vec = env["avec"].T @ mapping @
-            spin_structure[atom]["vec"]/np.linalg.norm(env["avec"], axis=1)
+            vec = env["avec"].T @ mapping @ spin_structure[atom]["vec"] / \
+                np.linalg.norm(env["avec"], axis=1)
             env["spin"].update({atom: {"frac_coord": [
                                mapping @ frac for frac in spin_structure[atom]["frac_coord"]], "vec": vec}})
             norm = np.linalg.norm(vec)

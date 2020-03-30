@@ -6,7 +6,8 @@ def create_pw_in(path, env, variables, calculation="scf"):
     atom_types = list(set(env['atoms']))
     nat = len(env['atoms'])
     # &CONTROL (no "/")
-    control = ["&CONTROL", f"calculation = '{calculation}'", f"pseudo_dir = '{env["psdir"]}'"]
+    control = [
+        "&CONTROL", f"calculation = '{calculation}'", f"pseudo_dir = '{env['psdir']}'"]
     # &SYSTEM (no "/")
     systems = ["&SYSTEM", "ibrav = 0", f"nat = {nat}", f"ntyp = {len(atom_types)}",
                f"ecutwfc = {env['ecutwfc']}", f"ecutrho = {env['ecutrho']}", f"occupations = {variables['occupations']}"]

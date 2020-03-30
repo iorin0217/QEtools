@@ -22,6 +22,21 @@ def draw_structure(structure_title, crystal_structure, spin_structure):
     return structure_figure
 
 
+struct_layout = html.Div(
+    Simple3DSceneComponent(
+        id=self.id("scene"),
+        data=self.initial_data["scene"],
+        settings=self.initial_scene_settings,
+    ),
+    style={
+        "width": "100%",
+        "height": "100%",
+        "overflow": "hidden",
+        "margin": "0 auto",
+    },
+)
+
+
 def draw_BZ(BZ_title, bvec, klabel):
     # special_point_annotation
     kpoints = []
