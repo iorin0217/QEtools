@@ -221,6 +221,7 @@ def create_env(structure_file, variables, extfields={"press": 0}, constraints={"
     # set elemental configuration
     env["lspinorb"] = False
     env["nspin"] = 1
+    env["lda_plus_u"] = False
     env["nbnd"] = 0
     env["ecutwfc"] = 0
     env["ecutrho"] = 0
@@ -229,20 +230,21 @@ def create_env(structure_file, variables, extfields={"press": 0}, constraints={"
         elements = json.load(f)
     for atom in atom_types:
         element = re.match(r"\D+", atom).group()  # double count exists
-        SOC = elements[element]["properties"]["SOC"]
-        Hubbard = elements[element]["properties"].get("Hubbard")
+        SOC = elements[element]["default"]["SOC"]
+        Hubbard = elements[element]["default"]["Hubbard"]["U"]
+        pstype = elements[element]["default"]["pstype"]
         if SOC == "fr":
             env["lspinorb"] = True
             env["nspin"] = 4  # to specify the quantization axis
         if Hubbard:
             env["lda_plus_u"] = True
-        pseudo = elements[element]["pseudopotential"]["PBE"][SOC]["ONCV"]
-        env[atom] = {"pseudo": pseudo, "Hubbard": Hubbard,
+        pseudo = elements[element]["pseudopotential"][variables["functional"]][SOC][pstype]
+        env[atom] = {"pseudofile": pseudo["filename"], "Hubbard": Hubbard,
                      "starting_magnetization": 0}
         env["nbnd"] += pseudo["nwfc"]
-        env["ecutwfc"] = max(env["ecutwfc"], pseudo["ecutwfc"])
+        env["ecutwfc"] = max(env["ecutwfc"], pseudo["cutoff"])
         env["ecutrho"] = max(
-            env["ecutrho"], pseudo["ecutwfc"]*pseudo["dual"])
+            env["ecutrho"], pseudo["cutoff"]*pseudo["dual"])
     if spin_structure:
         parallel = False
         for i, j in itertools.permutations(spin_structure, 2):
@@ -325,7 +327,7 @@ def create_pw_in(path, env, variables, calculation="scf"):
     nat = len(env['atoms'])
     # &CONTROL (no "/")
     control = [
-        "&CONTROL", f"calculation = '{calculation}'", f"pseudo_dir = '{env['psdir']}'"]
+        "&CONTROL", f"calculation = '{calculation}'", f"pseudo_dir = '{variables['pseudo_dir']}'"]
     # &SYSTEM (no "/")
     systems = ["&SYSTEM", "ibrav = 0", f"nat = {nat}", f"ntyp = {len(atom_types)}",
                f"ecutwfc = {env['ecutwfc']}", f"ecutrho = {env['ecutrho']}", f"occupations = {variables['occupations']}"]
@@ -353,14 +355,14 @@ def create_pw_in(path, env, variables, calculation="scf"):
     cell_parameters = ["CELL_PARAMETERS angstrom"] + \
         [f"{vec[0]} {vec[1]} {vec[2]}" for vec in env["avec"]]
     atomic_species = ["ATOMIC_SPECIES"] + \
-        [f"{atom} -1 {env[atom]['pseudo']}" for atom in atom_types]
+        [f"{atom} -1 {env[atom]['pseudofile']}" for atom in atom_types]
     atomic_positions = ["ATOMIC_POSITIONS crystal"] + [
-        f"{atoms[i]} {env['pos'][i][0]} {env['pos'][i][1]} {env['pos'][i][2]}" for i in range(nat)]
+        f"{env['atoms'][i]} {env['pos'][i][0]} {env['pos'][i][1]} {env['pos'][i][2]}" for i in range(nat)]
     CAA = cell_parameters + atomic_species + atomic_positions
 
     if calculation == "scf":
         kpoints = ["K_POINTS automatic",
-                   f"{int(nk[0])} {int(nk[1])} {int(nk[2])} 0 0 0"]
+                   f"{int(env['nk'][0])} {int(env['nk'][1])} {int(env['nk'][2])} 0 0 0"]
         scf_in = control + ["/"] + SSSH + ["/"] + \
             electrons + ["/"] + CAA + kpoints
     elif calculation == "vcrelax":
@@ -369,25 +371,25 @@ def create_pw_in(path, env, variables, calculation="scf"):
         cell = ["&CELL", "cell_dynamics = 'bfgs'",
                 f"press = {env['press']}"]
         kpoints = ["K_POINTS automatic",
-                   f"{int(nk[0])} {int(nk[1])} {int(nk[2])} 0 0 0"]
+                   f"{int(env['nk'][0])} {int(env['nk'][1])} {int(env['nk'][2])} 0 0 0"]
         vcrelax_in = control + conv_thr + \
             ["/"] + SSSH + ["/"] + electrons + ["/"] + \
             ions + ["/"] + cell + ["/"] + CAA + kpoints
     elif calculation == "nscf":
         nbnd = [f"nbnd = {env['nbnd']}"]
         kpoints = ["K_POINTS automatic",
-                   f"{int(nk[0])*2} {int(nk[1])*2} {int(nk[2])*2} 0 0 0"]
+                   f"{int(env['nk'][0])*2} {int(env['nk'][1])*2} {int(env['nk'][2])*2} 0 0 0"]
         nscf_in = control + ["/"] + SSSH + nbnd + \
             ["/"] + electrons + ["/"] + CAA + kpoints
     elif calculation == "bands":
         nbnd = [f"nbnd = {env['nbnd']}"]
         kpath = ["K_POINTS crystal"] + [f"{len(env['bandpath'])}"] + [
             f"{kcoord[0]} {kcoord[1]} {kcoord[2]} 1.0" for kcoord in env['kpath']]
-        nscf_in = control + ["/"] + SSSH + nbnd + \
+        bands_in = control + ["/"] + SSSH + nbnd + \
             ["/"] + electrons + ["/"] + CAA + kpath
-
-    print(eval(
-        f"*{calculation}_in, sep='\n', end='\n', file=open(f'{path}/{calculation}.in','w')"))
+    tmp = repr('\n')
+    eval(
+        f"print(*{calculation}_in, sep={tmp}, end={tmp}, file=open('{path}/{calculation}.in','w'))")
 
 # %%
 
@@ -430,14 +432,14 @@ def create_dos_in(path, efermi, emin=-10, emax=10, deltae=0.05):
 
 # %%
 variables = {"reference_distance": 0.025, "dk_grid": 0.2, "occupations": "tetrahedra_opt",
-             "diagonalization": "cg", "mixing_beta": 0.2, "threshold": 1.0e-10}
+             "diagonalization": "cg", "mixing_beta": 0.2, "threshold": 1.0e-10, "functional": "PBE", "pseudo_dir": "/home/CMD35/cmd35stud07/QEtools/settings/pseudos"}
 path = "/home/CMD35/cmd35stud07/experiments/Ba2RhO4/fr"
 env = create_env(
     "/home/CMD35/cmd35stud07/experiments/Ba2RhO4/Ba2RhO4_experiment.cif", variables)
-scf_in = create_pw_in(path, env, variables, calculation="scf")
-nscf_in = create_pw_in(path, env, variables, calculation="nscf")
-bands_in = create_pw_in(path, env, variables, calculation="bands")
-band_in = create_band_in(path)
+create_pw_in(path, env, variables, calculation="scf")
+create_pw_in(path, env, variables, calculation="nscf")
+create_pw_in(path, env, variables, calculation="bands")
+create_band_in(path)
 
 
 # %%

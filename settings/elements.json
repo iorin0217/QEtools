@@ -14,11 +14,12 @@
                 }
             }
         },
-        "properties": {
+        "default": {
             "SOC": "sr",
             "Hubbard": {
                 "U": null
-            }
+            },
+            "pstype": "PAW"
         }
     },
     "O": {
@@ -36,11 +37,12 @@
                 }
             }
         },
-        "properties": {
+        "default": {
             "SOC": "sr",
             "Hubbard": {
                 "U": null
-            }
+            },
+            "pstype": "PAW"
         }
     },
     "Rh": {
@@ -68,11 +70,12 @@
                 }
             }
         },
-        "properties": {
+        "default": {
             "SOC": "fr",
             "Hubbard": {
                 "U": null
-            }
+            },
+            "pstype": "ONCV"
         }
     }
 }

@@ -78,6 +78,7 @@ def create_env(structure_file, variables, extfields={"press": 0}, constraints={"
     # set elemental configuration
     env["lspinorb"] = False
     env["nspin"] = 1
+    env["lda_plus_u"] = False
     env["nbnd"] = 0
     env["ecutwfc"] = 0
     env["ecutrho"] = 0
@@ -86,20 +87,21 @@ def create_env(structure_file, variables, extfields={"press": 0}, constraints={"
         elements = json.load(f)
     for atom in atom_types:
         element = re.match(r"\D+", atom).group()  # double count exists
-        SOC = elements[element]["properties"]["SOC"]
-        Hubbard = elements[element]["properties"].get("Hubbard")
+        SOC = elements[element]["default"]["SOC"]
+        Hubbard = elements[element]["default"]["Hubbard"]["U"]
+        pstype = elements[element]["default"]["pstype"]
         if SOC == "fr":
             env["lspinorb"] = True
             env["nspin"] = 4  # to specify the quantization axis
         if Hubbard:
             env["lda_plus_u"] = True
-        pseudo = elements[element]["pseudopotential"]["PBE"][SOC]["ONCV"]
-        env[atom] = {"pseudo": pseudo, "Hubbard": Hubbard,
+        pseudo = elements[element]["pseudopotential"][variables["functional"]][SOC][pstype]
+        env[atom] = {"pseudofile": pseudo["filename"], "Hubbard": Hubbard,
                      "starting_magnetization": 0}
         env["nbnd"] += pseudo["nwfc"]
-        env["ecutwfc"] = max(env["ecutwfc"], pseudo["ecutwfc"])
+        env["ecutwfc"] = max(env["ecutwfc"], pseudo["cutoff"])
         env["ecutrho"] = max(
-            env["ecutrho"], pseudo["ecutwfc"]*pseudo["dual"])
+            env["ecutrho"], pseudo["cutoff"]*pseudo["dual"])
     if spin_structure:
         parallel = False
         for i, j in itertools.permutations(spin_structure, 2):

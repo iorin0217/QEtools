@@ -7,7 +7,7 @@ def create_pw_in(path, env, variables, calculation="scf"):
     nat = len(env['atoms'])
     # &CONTROL (no "/")
     control = [
-        "&CONTROL", f"calculation = '{calculation}'", f"pseudo_dir = '{env['psdir']}'"]
+        "&CONTROL", f"calculation = '{calculation}'", f"pseudo_dir = '{variables['pseudo_dir']}'"]
     # &SYSTEM (no "/")
     systems = ["&SYSTEM", "ibrav = 0", f"nat = {nat}", f"ntyp = {len(atom_types)}",
                f"ecutwfc = {env['ecutwfc']}", f"ecutrho = {env['ecutrho']}", f"occupations = {variables['occupations']}"]
@@ -35,14 +35,14 @@ def create_pw_in(path, env, variables, calculation="scf"):
     cell_parameters = ["CELL_PARAMETERS angstrom"] + \
         [f"{vec[0]} {vec[1]} {vec[2]}" for vec in env["avec"]]
     atomic_species = ["ATOMIC_SPECIES"] + \
-        [f"{atom} -1 {env[atom]['pseudo']}" for atom in atom_types]
+        [f"{atom} -1 {env[atom]['pseudofile']}" for atom in atom_types]
     atomic_positions = ["ATOMIC_POSITIONS crystal"] + [
-        f"{atoms[i]} {env['pos'][i][0]} {env['pos'][i][1]} {env['pos'][i][2]}" for i in range(nat)]
+        f"{env['atoms'][i]} {env['pos'][i][0]} {env['pos'][i][1]} {env['pos'][i][2]}" for i in range(nat)]
     CAA = cell_parameters + atomic_species + atomic_positions
 
     if calculation == "scf":
         kpoints = ["K_POINTS automatic",
-                   f"{int(nk[0])} {int(nk[1])} {int(nk[2])} 0 0 0"]
+                   f"{int(env['nk'][0])} {int(env['nk'][1])} {int(env['nk'][2])} 0 0 0"]
         scf_in = control + ["/"] + SSSH + ["/"] + \
             electrons + ["/"] + CAA + kpoints
     elif calculation == "vcrelax":
@@ -51,22 +51,22 @@ def create_pw_in(path, env, variables, calculation="scf"):
         cell = ["&CELL", "cell_dynamics = 'bfgs'",
                 f"press = {env['press']}"]
         kpoints = ["K_POINTS automatic",
-                   f"{int(nk[0])} {int(nk[1])} {int(nk[2])} 0 0 0"]
+                   f"{int(env['nk'][0])} {int(env['nk'][1])} {int(env['nk'][2])} 0 0 0"]
         vcrelax_in = control + conv_thr + \
             ["/"] + SSSH + ["/"] + electrons + ["/"] + \
             ions + ["/"] + cell + ["/"] + CAA + kpoints
     elif calculation == "nscf":
         nbnd = [f"nbnd = {env['nbnd']}"]
         kpoints = ["K_POINTS automatic",
-                   f"{int(nk[0])*2} {int(nk[1])*2} {int(nk[2])*2} 0 0 0"]
+                   f"{int(env['nk'][0])*2} {int(env['nk'][1])*2} {int(env['nk'][2])*2} 0 0 0"]
         nscf_in = control + ["/"] + SSSH + nbnd + \
             ["/"] + electrons + ["/"] + CAA + kpoints
     elif calculation == "bands":
         nbnd = [f"nbnd = {env['nbnd']}"]
         kpath = ["K_POINTS crystal"] + [f"{len(env['bandpath'])}"] + [
             f"{kcoord[0]} {kcoord[1]} {kcoord[2]} 1.0" for kcoord in env['kpath']]
-        nscf_in = control + ["/"] + SSSH + nbnd + \
+        bands_in = control + ["/"] + SSSH + nbnd + \
             ["/"] + electrons + ["/"] + CAA + kpath
-
-    print(eval(
-        f"*{calculation}_in, sep='\n', end='\n', file=open(f'{path}/{calculation}.in','w')"))
+    tmp = repr('\n')
+    eval(
+        f"print(*{calculation}_in, sep={tmp}, end={tmp}, file=open('{path}/{calculation}.in','w'))")
