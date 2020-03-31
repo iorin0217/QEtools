@@ -22,6 +22,29 @@
             "pstype": "PAW"
         }
     },
+    "Sr": {
+        "pseudopotential": {
+            "PBE": {
+                "sr": {
+                    "RRKJ": {
+                        "filename": "Sr_pbe_v1.uspp.F.UPF",
+                        "cutoff": 30.0,
+                        "dual": 8.0,
+                        "nwfc": 10,
+                        "cite": "GBRV-1.2",
+                        "from": "SSSP"
+                    }
+                }
+            }
+        },
+        "default": {
+            "SOC": "sr",
+            "Hubbard": {
+                "U": null
+            },
+            "pstype": "RRKJ"
+        }
+    },
     "O": {
         "pseudopotential": {
             "PBE": {
@@ -64,6 +87,39 @@
                         "cutoff": 35.0,
                         "dual": 4.0,
                         "nwfc": 17,
+                        "cite": "ONCVPSP",
+                        "from": "PD"
+                    }
+                }
+            }
+        },
+        "default": {
+            "SOC": "fr",
+            "Hubbard": {
+                "U": null
+            },
+            "pstype": "ONCV"
+        }
+    },
+    "Ru": {
+        "pseudopotential": {
+            "PBE": {
+                "sr": {
+                    "ONCV": {
+                        "filename": "Ru_ONCV_PBE-1.0.oncvpsp.upf",
+                        "cutoff": 35.0,
+                        "dual": 4.0,
+                        "nwfc": 16,
+                        "cite": "SG15",
+                        "from": "SSSP"
+                    }
+                },
+                "fr": {
+                    "ONCV": {
+                        "filename": "Ru.upf",
+                        "cutoff": 35.0,
+                        "dual": 4.0,
+                        "nwfc": 16,
                         "cite": "ONCVPSP",
                         "from": "PD"
                     }

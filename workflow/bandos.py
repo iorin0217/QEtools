@@ -6,9 +6,11 @@ env = create_env(
 create_pw_in(path, env, variables, calculation="scf")
 create_pw_in(path, env, variables, calculation="nscf")
 create_pw_in(path, env, variables, calculation="bands")
-create_band_in(path)
 # job
 # parse
 efermi = 0
+create_band_in(path)
 create_dos_in(path, efermi)
 create_projwfc_in(path, efermi)
+# job2
+# fermisurfer
