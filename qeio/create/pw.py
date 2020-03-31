@@ -10,7 +10,7 @@ def create_pw_in(path, env, variables, calculation="scf"):
         "&CONTROL", f"calculation = '{calculation}'", f"pseudo_dir = '{variables['pseudo_dir']}'"]
     # &SYSTEM (no "/")
     systems = ["&SYSTEM", "ibrav = 0", f"nat = {nat}", f"ntyp = {len(atom_types)}",
-               f"ecutwfc = {env['ecutwfc']}", f"ecutrho = {env['ecutrho']}", f"occupations = {variables['occupations']}"]
+               f"ecutwfc = {env['ecutwfc']}", f"ecutrho = {env['ecutrho']}", f"occupations = '{variables['occupations']}''"]
     spin = []
     if env['nspin'] == 2:
         spin = ["nspin = 2"] + \
@@ -30,7 +30,7 @@ def create_pw_in(path, env, variables, calculation="scf"):
     SSSH = systems + spin + soc + hubbard
     # &ELECTRONS (no "/")
     electrons = ["&ELECTRONS", f"conv_thr = {float(nat)*variables['threshold']}",
-                 f"mixing_beta = {variables['mixing_beta']}", f"diagonalization = {variables['diagonalization']}"]
+                 f"mixing_beta = {variables['mixing_beta']}", f"diagonalization = '{variables['diagonalization']}''"]
     # CELL_PARAMETERS, ATOMIC_SPECIES, ATOMIC_POSITIONS
     cell_parameters = ["CELL_PARAMETERS angstrom"] + \
         [f"{vec[0]} {vec[1]} {vec[2]}" for vec in env["avec"]]
