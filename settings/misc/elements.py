@@ -53,7 +53,7 @@ for _element in sssps:
                         [_element]["basename"]).split(".")[0]
             shutil.move(
                 f"/home/CMD35/cmd35stud07/QEtools/settings/misc/ONCVPSP-PBE-FR-PDv0.4/{_element}/{basename}.upf", f"/home/CMD35/cmd35stud07/QEtools/settings/pseudos/{ps_file}")
-        elif sssp["cite"] == "SG15" | sssp["cite"] == "SG15-1.1":
+        elif "SG15" in sssp["cite"]:
             resource = "ONCVPSP"
             cite = "SG15"
             cutoff = sssp["cutoff"]
@@ -61,41 +61,54 @@ for _element in sssps:
             ps_file = _element+"_ONCV_OBE_fr.upf"
             shutil.move(
                 f"/home/CMD35/cmd35stud07/QEtools/settings/misc/sg15/{ps_file}", f"/home/CMD35/cmd35stud07/QEtools/settings/pseudos/{ps_file}")
-        elif sssp["cite"] == "Wentzcovitch":
+        elif sssp["cite"] == "Wentzcovitch" | "GBRV" in sssp["cite"]:
             html = requests.get(ps_url + _element.lower())
             soup = BeautifulSoup(html.text, "html.parser")
             candidates = [i.getText()
                                     for i in soup.select("#content-right td")]
             ps_file_indexs = [j for j, k in enumerate(
-                candidates) if "Pseudopotential type: PAW \nFunctional type: PBE\nNon Linear Core Correction\nFull relativistic\n" in k]
+                candidates) if f"Pseudopotential type: {pstype} \nFunctional type: PBE\nNon Linear Core Correction\nFull relativistic\n" in k]
             if len(ps_file_indexs) < 1:
                 print(
                     f"I can't find a fr potential of {_element} in PS Library")
-            elif len(ps_file_indexs) > 1:
-                # select more semi core
-                ps_file_index = sorted([(len(candidates[j]), j)
-                       for j in ps_file_indexs], reverse=True)[0][1]
             else:
-                ps_file_index = ps_file_indexs[0]
-            href = "https://www.quantum-espresso.org" + \
-                soup.select(
-                    "#content-right td")[ps_file_index].find("a")["href"]
-            ps_text = requests.get(href).text
-            resource = "pslib"
-            cite = "100PAW"
-            # TODO : extract Suggested minimum cutoff for wavefunctions
-            cutoff = sssp["cutoff"]
-            dual = 8
-            ps_file = soup.select(
-                "#content-right td")[ps_file_index].find("a").getText().strip()
-            print(ps_text, sep='\n',
-                  file=open(f"/home/CMD35/cmd35stud07/QEtools/settings/pseudos/{ps_file}", 'w'))
+                if len(ps_file_indexs) > 1:
+                    # select more semi core
+                    ps_file_index = sorted([(len(candidates[j]), j)
+                        for j in ps_file_indexs], reverse=True)[0][1]
+                else:
+                    ps_file_index = ps_file_indexs[0]
+                href = "https://www.quantum-espresso.org" + \
+                    soup.select(
+                        "#content-right td")[ps_file_index].find("a")["href"]
+                ps_text = requests.get(href).text
+                resource = "pslib"
+                cite = "100PAW"
+                # TODO : extract Suggested minimum cutoff for wavefunctions
+                cutoff = sssp["cutoff"]
+                dual = 8
+                ps_file = soup.select(
+                    "#content-right td")[ps_file_index].find("a").getText().strip()
+                print(ps_text, sep='\n',
+                    file=open(f"/home/CMD35/cmd35stud07/QEtools/settings/pseudos/{ps_file}", 'w'))
         else:
-            resource = "pslib"
-            cite = sssp["cite"]
-            cutoff = sssp["cutoff"]
-            dual = sssp["dual"]
-            ps_file =
+            # sr is taken from pslibrary
+            html = requests.get(ps_url + _element.lower())
+            soup = BeautifulSoup(html.text, "html.parser")
+            href = "https://www.quantum-espresso.org" + "/upf_files" + \
+                _element+".rel-" + sssp["filename"][len(_element)+1:]
+            if requests.get(href).status_code == 200:
+                ps_text = requests.get(href).text
+                resource = "pslib"
+                cite = sssp["cite"]
+                cutoff = sssp["cutoff"]
+                dual = sssp["dual"]
+                ps_file = _element+".rel-" + sssp["filename"][len(_element)+1:]
+                print(ps_text, sep='\n',
+                    file=open(f"/home/CMD35/cmd35stud07/QEtools/settings/pseudos/{ps_file}", 'w'))
+            else:
+                print(
+                    f"I can't find a fr potential of {_element} in PS Library")
         ps = {"filename": ps_file, "cutoff": cutoff,
             "dual": dual, "cite": cite, "resource": resource}
         pseudo["pseudopotential"]["PBE"].update({"fr": {pstype: ps}})
@@ -104,6 +117,7 @@ for _element in sssps:
     elements[_element] = pseudo
 with open("/home/CMD35/cmd35stud07/QEtools/settings/misc/SSSP_precision.json", "w") as f:
     json.dump(elements, f)
+# TODO : rm
 # rm -r SSSP_precision_pseudos
 # rm -r ONCVPSP-PBE-FR-PDv0.4
 # rm -r sg15
