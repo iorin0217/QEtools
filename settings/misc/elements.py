@@ -1,25 +1,26 @@
 import json
 from pymatgen.core.periodic_table import get_el_sp
 from pymatgen import Element
+import requests
 from bs4 import BeautifulSoup
 import re
 import time
+import shutil
 
-# SSSP wget
-with open("/home/CMD35/cmd35stud07/QEtools/settings/misc/SSSP_precision_pseudos/SSSP_precision.json", "r") as f:
+# TODO : SSSP wget
+with open("/home/CMD35/cmd35stud07/QEtools/settings/misc/SSSP_precision.json", "r") as f:
     sssps = json.load(f)
-# mv
+# mv SSSP_precision_pseudos/* ../pseudos/
 
-# Dojo wget
+# TODO : Dojo wget
 # https://github.com/abinit/pseudo_dojo
-# mv rm
+# rm other
 with open("/home/CMD35/cmd35stud07/QEtools/settings/misc/ONCVPSP-PBE-FR-PDv0.4/stringent.djson", "r") as f:
     dojo = json.load(f)
-# rename .rel.oncvpsp.upf
 
-# SG15 wget
+# TODO : SG15 wget
 # https://github.com/pipidog/ONCVPSP/
-# mv rm
+# rm other
 
 # pslibrary
 ps_url = "https://www.quantum-espresso.org/pseudopotentials/ps-library/"
@@ -40,6 +41,7 @@ for _element in sssps:
     sssp = {"filename": sssps[_element]["filename"], "cutoff": sssps[_element]["cutoff"],
         "dual": sssps[_element]["dual"], "cite": sssps[_element]["pseudopotential"], "resource": "SSSP"}
     pseudo = {"pseudopotential": {"PBE": {"sr": {pstype: sssp}}}}
+    # collect fr potential
     if SOC == "fr":
         if sssp["cite"] == "Dojo":
             resource = "Dojo"
@@ -47,24 +49,47 @@ for _element in sssps:
             cutoff = dojo["pseudos_metadata"][_element]["hints"]["high"]["ecut"]
             dual = 4
             ps_file = _element+".rel.oncvpsp.upf"
-            # mv
+            basename = (dojo["pseudos_metadata"]
+                        [_element]["basename"]).split(".")[0]
+            shutil.move(
+                f"/home/CMD35/cmd35stud07/QEtools/settings/misc/ONCVPSP-PBE-FR-PDv0.4/{_element}/{basename}.upf", f"/home/CMD35/cmd35stud07/QEtools/settings/pseudos/{ps_file}")
         elif sssp["cite"] == "SG15" | sssp["cite"] == "SG15-1.1":
             resource = "ONCVPSP"
             cite = "SG15"
             cutoff = sssp["cutoff"]
             dual = 4
             ps_file = _element+"_ONCV_OBE_fr.upf"
-            # mv
+            shutil.move(
+                f"/home/CMD35/cmd35stud07/QEtools/settings/misc/sg15/{ps_file}", f"/home/CMD35/cmd35stud07/QEtools/settings/pseudos/{ps_file}")
         elif sssp["cite"] == "Wentzcovitch":
-            ps_url + _element.lower()
-            # <pre>
-            # element_anchor class / href wget
-            # pstype / PBE / Full relativistic / 長い
+            html = requests.get(ps_url + _element.lower())
+            soup = BeautifulSoup(html.text, "html.parser")
+            candidates = [i.getText()
+                                    for i in soup.select("#content-right td")]
+            ps_file_indexs = [j for j, k in enumerate(
+                candidates) if "Pseudopotential type: PAW \nFunctional type: PBE\nNon Linear Core Correction\nFull relativistic\n" in k]
+            if len(ps_file_indexs) < 1:
+                print(
+                    f"I can't find a fr potential of {_element} in PS Library")
+            elif len(ps_file_indexs) > 1:
+                # select more semi core
+                ps_file_index = sorted([(len(candidates[j]), j)
+                       for j in ps_file_indexs], reverse=True)[0][1]
+            else:
+                ps_file_index = ps_file_indexs[0]
+            href = "https://www.quantum-espresso.org" + \
+                soup.select(
+                    "#content-right td")[ps_file_index].find("a")["href"]
+            ps_text = requests.get(href).text
             resource = "pslib"
             cite = "100PAW"
-            cutoff = Suggested minimum cutoff * 2
+            # TODO : extract Suggested minimum cutoff for wavefunctions
+            cutoff = sssp["cutoff"]
             dual = 8
-            ps_file =
+            ps_file = soup.select(
+                "#content-right td")[ps_file_index].find("a").getText().strip()
+            print(ps_text, sep='\n',
+                  file=open(f"/home/CMD35/cmd35stud07/QEtools/settings/pseudos/{ps_file}", 'w'))
         else:
             resource = "pslib"
             cite = sssp["cite"]
@@ -79,4 +104,6 @@ for _element in sssps:
     elements[_element] = pseudo
 with open("/home/CMD35/cmd35stud07/QEtools/settings/misc/SSSP_precision.json", "w") as f:
     json.dump(elements, f)
-# rm
+# rm -r SSSP_precision_pseudos
+# rm -r ONCVPSP-PBE-FR-PDv0.4
+# rm -r sg15
