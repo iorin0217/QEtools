@@ -16,6 +16,7 @@ This code plots:
 - BZ of it
 '''
 
+
 def bandos_plot():
     # use subplot
     band_set
@@ -116,39 +117,56 @@ def band_plot(emin, emax, band_gnu_file, fermi_energy, band_gp_file):
     pltly.plot(bandfig, filename="Bands_SrP8", include_mathjax='cdn')
 
 
-def dos_set(dos_gnu_file):
-    return None
+def dos_plot(dos, efermi, orbcomb=None):
+    '''
+    dos: instance of Dos
+        {otn}
+    orbcomb: orbital combination
+        None -> only tdos
+        [[(atom1,orb1)],[(atom2,orb1),(atom2,orb2)]] -> pdos & tdos
+        pdos: sum of inner list (atom,orb)
+    '''
+    def sum_pdos(orbcomb):
+        retrun
+    tdos = sum_pdos()
+    for orb in orbcomb:
+
+    dosdata = go.Data([trace_tdos, trace_3s, trace_3p])
 
 
-def dos_plot():
-    with open('213p5_U.projwfc.pdos_atm#5(Pd)_wfc#3(d)','r') as dat:
-    lines = dat.readlines()
-    begin = 1
-    end = len(lines)
-    names=['total',r'$ z^2 $','xz','yz',r'$ x^2-y^2 $','xy']
-    trace=[]
-    for j in range(1,7):
-        energy = []
-        DOS = []
-        for i in range(begin, end):
-            e = float(lines[i].split()[0]) - 8.6327
-            dos = float(lines[i].split()[j])
-            energy.append(e)
-            DOS.append(dos)
+    return dosdata
 
-        trace1 = go.Scatter(
-            x = energy,
-            y = DOS,
-            name=names[j-1]
-        )
-        trace.append(trace1)
-    layout = go.Layout(
-        xaxis=dict(title = 'energy[eV]'),
-        yaxis=dict(title = 'DOS[E]'),
+
+def dos_set(tdos):
+    dosxaxis = go.XAxis(
+        title="Density of states",
+        showgrid=True,
+        showline=True,
+        range=[.01, 3],
+        mirror="ticks",
+        ticks="inside",
+        linewidth=2,
+        tickwidth=2
     )
+    dosyaxis = go.YAxis(
+        title="$E - E_f \quad / \quad \\text{eV}$",
+        showgrid=True,
+        showline=True,
+        ticks="inside",
+        mirror='ticks',
+        linewidth=2,
+        tickwidth=2,
+        zerolinewidth=2
+    )
+    dos_layout = go.Layout(
+        title="Density of states of Silicon",
+        xaxis=dosxaxis,
+        yaxis=dosyaxis
+    )
+    return dos_layout
 
-    fig = go.Figure(data=trace, layout=layout)
 
-    ofl.plot(fig,filename='p-DOS.html', auto_open=False, include_mathjax='cdn')
-
-    return None
+'''
+    ofl.plot(fig, filename='p-DOS.html',
+             auto_open=False, include_mathjax='cdn')
+'''

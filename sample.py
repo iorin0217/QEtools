@@ -311,8 +311,6 @@ def create_env(structure_file, variables, extfields={"press": 0}, constraints={"
                           [_start]] = skp["path"][ipath][0]
     env["kticks"][skp["explicit_kpoints_linearcoord"][-1]
                   ] = skp["path"][-1][1]  # retrieve the final point
-    env["nk"] = np.round(np.linalg.norm(
-        env["bvec"], axis=0) / variables["dk_grid"])
 
     # extfields, constraints
     # hdf5
@@ -320,6 +318,7 @@ def create_env(structure_file, variables, extfields={"press": 0}, constraints={"
     return env
 
 # %%
+# https://www.quantum-espresso.org/Doc/INPUT_PW.html
 
 
 def create_pw_in(path, env, variables, calculation="scf"):
@@ -331,7 +330,7 @@ def create_pw_in(path, env, variables, calculation="scf"):
         "&CONTROL", f"calculation = '{calculation}'", f"pseudo_dir = '{variables['pseudo_dir']}'"]
     # &SYSTEM (no "/")
     systems = ["&SYSTEM", "ibrav = 0", f"nat = {nat}", f"ntyp = {len(atom_types)}",
-               f"ecutwfc = {env['ecutwfc']}", f"ecutrho = {env['ecutrho']}", f"occupations = {variables['occupations']}"]
+               f"ecutwfc = {env['ecutwfc']}", f"ecutrho = {env['ecutrho']}", f"occupations = '{variables['occupations']}''"]
     spin = []
     if env['nspin'] == 2:
         spin = ["nspin = 2"] + \
@@ -351,7 +350,7 @@ def create_pw_in(path, env, variables, calculation="scf"):
     SSSH = systems + spin + soc + hubbard
     # &ELECTRONS (no "/")
     electrons = ["&ELECTRONS", f"conv_thr = {float(nat)*variables['threshold']}",
-                 f"mixing_beta = {variables['mixing_beta']}", f"diagonalization = {variables['diagonalization']}"]
+                 f"mixing_beta = {variables['mixing_beta']}", f"diagonalization = '{variables['diagonalization']}'", f"diago_full_acc = {variables['diago_full_acc']}"]
     # CELL_PARAMETERS, ATOMIC_SPECIES, ATOMIC_POSITIONS
     cell_parameters = ["CELL_PARAMETERS angstrom"] + \
         [f"{vec[0]} {vec[1]} {vec[2]}" for vec in env["avec"]]
@@ -363,7 +362,7 @@ def create_pw_in(path, env, variables, calculation="scf"):
 
     if calculation == "scf":
         kpoints = ["K_POINTS automatic",
-                   f"{int(env['nk'][0])} {int(env['nk'][1])} {int(env['nk'][2])} 0 0 0"]
+                   f"{int(variables['nk'][0])} {int(variables['nk'][1])} {int(variables['nk'][2])} 0 0 0"]
         scf_in = control + ["/"] + SSSH + ["/"] + \
             electrons + ["/"] + CAA + kpoints
     elif calculation == "vcrelax":
@@ -372,14 +371,14 @@ def create_pw_in(path, env, variables, calculation="scf"):
         cell = ["&CELL", "cell_dynamics = 'bfgs'",
                 f"press = {env['press']}"]
         kpoints = ["K_POINTS automatic",
-                   f"{int(env['nk'][0])} {int(env['nk'][1])} {int(env['nk'][2])} 0 0 0"]
+                   f"{int(variables['nk'][0])} {int(variables['nk'][1])} {int(variables['nk'][2])} 0 0 0"]
         vcrelax_in = control + conv_thr + \
             ["/"] + SSSH + ["/"] + electrons + ["/"] + \
             ions + ["/"] + cell + ["/"] + CAA + kpoints
     elif calculation == "nscf":
         nbnd = [f"nbnd = {env['nbnd']}"]
         kpoints = ["K_POINTS automatic",
-                   f"{int(env['nk'][0])*2} {int(env['nk'][1])*2} {int(env['nk'][2])*2} 0 0 0"]
+                   f"{int(variables['nk'][0])*2} {int(variables['nk'][1])*2} {int(variables['nk'][2])*2} 0 0 0"]
         nscf_in = control + ["/"] + SSSH + nbnd + \
             ["/"] + electrons + ["/"] + CAA + kpoints
     elif calculation == "bands":
@@ -392,7 +391,6 @@ def create_pw_in(path, env, variables, calculation="scf"):
     eval(
         f"print(*{calculation}_in, sep={tmp}, end={tmp}, file=open('{path}/{calculation}.in','w'))")
 
-    # print(env['avec'])
 # %%
 
 
@@ -433,8 +431,8 @@ def create_dos_in(path, efermi, emin=-10, emax=10, deltae=0.05):
 
 
 # %%
-variables = {"reference_distance": 0.025, "dk_grid": 0.2, "occupations": "tetrahedra_opt",
-             "diagonalization": "david", "mixing_beta": 0.2, "threshold": 1.0e-10, "functional": "PBE", "pseudo_dir": "/home/CMD35/cmd35stud07/QEtools/settings/pseudos"}
+variables = {"reference_distance": 0.025, "nk": [8, 8, 8], "occupations": "tetrahedra_opt",
+             "diagonalization": "david", "mixing_beta": 0.2, "threshold": 1.0e-12, "functional": "PBE", "pseudo_dir": "/home/CMD35/cmd35stud07/QEtools/settings/pseudos"}
 path = "/home/CMD35/cmd35stud07/experiments/Sr2RuO4/fr"
 env = create_env(
     "/home/CMD35/cmd35stud07/experiments/Sr2RuO4/Sr2RuO4_mp-4596_conventional_standard.cif", variables)
