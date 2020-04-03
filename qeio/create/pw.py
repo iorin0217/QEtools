@@ -27,7 +27,7 @@ def create_pw_in(path, env, variables, calculation="scf"):
     hubbard = []
     if env['lda_plus_u']:
         hubbard = ["lda_plus_u = .true."] + ["lda_plus_u_kind = 1"] + [f"Hubbard_U({i+1}) = {env[atom]['Hubbard']['U']}" for i, atom in enumerate(
-            atom_types) if env[atom]['Hubbard']['U']] + [f"Hubbard_J0({i+1}) = {env[atom]['Hubbard']['J']}" for i, atom in enumerate(atom_types) if env[atom]['Hubbard']['J']]
+            atom_types) if env[atom]['Hubbard'] and env[atom]['Hubbard'].get('U')] + [f"Hubbard_J0({i+1}) = {env[atom]['Hubbard']['J']}" for i, atom in enumerate(atom_types) if env[atom]['Hubbard'] and env[atom]['Hubbard'].get('J')]
     SSSH = systems + spin + soc + hubbard
     # &ELECTRONS (no "/")
     electrons = ["&ELECTRONS", f"conv_thr = {float(nat)*variables['threshold']}",
