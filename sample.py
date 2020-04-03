@@ -265,7 +265,6 @@ def create_env(structure_file, variables, extfields={"press": 0}, constraints={"
         [atomnum % 1000 for atomnum in skp["primitive_types"] if atomnum > 1000])
     env["atoms"] = [str(get_el_sp(atomnum % 1000))+f"{atomnum//1000+1}" if atomnum %
                     1000 in duplicated else str(get_el_sp(atomnum)) for atomnum in skp["primitive_types"]]
-    env["nbnd"] = sum([nwfc[atom] for atom in env["atoms"]])
     env["pos"] = skp["primitive_positions"]
     # easy to access the structual property
     env["crystal"] = Structure(Lattice(env["avec"]), env["atoms"], env["pos"])
@@ -378,16 +377,14 @@ def create_pw_in(path, env, variables, calculation="scf"):
             ["/"] + SSSH + ["/"] + electrons + ["/"] + \
             ions + ["/"] + cell + ["/"] + CAA + kpoints
     elif calculation == "nscf":
-        nbnd = [f"nbnd = {env['nbnd']}"]
         kpoints = ["K_POINTS automatic",
                    f"{int(env['nk'][0])*2} {int(env['nk'][1])*2} {int(env['nk'][2])*2} 0 0 0"]
-        nscf_in = control + ["/"] + SSSH + nbnd + \
+        nscf_in = control + ["/"] + SSSH + \
             ["/"] + electrons + ["/"] + CAA + kpoints
     elif calculation == "bands":
-        nbnd = [f"nbnd = {env['nbnd']}"]
         kpath = ["K_POINTS crystal"] + [f"{len(env['bandpath'])}"] + [
             f"{kcoord[0]} {kcoord[1]} {kcoord[2]} 1.0" for kcoord in env['kpath']]
-        bands_in = control + ["/"] + SSSH + nbnd + \
+        bands_in = control + ["/"] + SSSH + \
             ["/"] + electrons + ["/"] + CAA + kpath
     tmp = repr('\n')
     eval(
@@ -444,7 +441,6 @@ for cif in Path("/home/CMD35/cmd35stud07/experiments/").glob("Sr2*/*.cif"):
     create_pw_in(path, env, variables, calculation="bands")
     create_band_in(path)
 # %%
-
 
 
 # %%
