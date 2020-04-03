@@ -329,7 +329,7 @@ def create_pw_in(path, env, variables, calculation="scf"):
         "&CONTROL", f"calculation = '{calculation}'", f"pseudo_dir = '{variables['pseudo_dir']}'"]
     # &SYSTEM (no "/")
     systems = ["&SYSTEM", "ibrav = 0", f"nat = {nat}", f"ntyp = {len(atom_types)}",
-               f"ecutwfc = {env['ecutwfc']}", f"ecutrho = {env['ecutrho']}", f"occupations = '{variables['occupations']}''"]
+               f"ecutwfc = {env['ecutwfc']}", f"ecutrho = {env['ecutrho']}", f"occupations = '{variables['occupations']}'"]
     spin = []
     if env['nspin'] == 2:
         spin = ["nspin = 2"] + \
@@ -344,7 +344,7 @@ def create_pw_in(path, env, variables, calculation="scf"):
         soc = ["lspinorb = .true."]
     hubbard = []
     if env['lda_plus_u']:
-        hubbard = ["lda_plus_u = .true."] + ["lda_plus_u_kind = 0"] + [f"Hubbard_U({i+1}) = {env[atom]['Hubbard']['U']}" for i, atom in enumerate(
+        hubbard = ["lda_plus_u = .true."] + ["lda_plus_u_kind = 1"] + [f"Hubbard_U({i+1}) = {env[atom]['Hubbard']['U']}" for i, atom in enumerate(
             atom_types) if env[atom]['Hubbard'] and env[atom]['Hubbard'].get('U')] + [f"Hubbard_J0({i+1}) = {env[atom]['Hubbard']['J']}" for i, atom in enumerate(atom_types) if env[atom]['Hubbard'] and env[atom]['Hubbard'].get('J')]
     SSSH = systems + spin + soc + hubbard
     # &ELECTRONS (no "/")
@@ -432,14 +432,22 @@ variables = {"reference_distance": 0.025, "dk_grid": 0.2, "occupations": "tetrah
              "diagonalization": "david", "mixing_beta": 0.2, "threshold": 1.0e-12, "functional": "PBE", "pseudo_dir": "/home/CMD35/cmd35stud07/QEtools/settings/pseudos"}
 # %%
 for cif in Path("/home/CMD35/cmd35stud07/experiments/").glob("Sr2*/*.cif"):
-    path = cif.parent / "fr"
+    path = cif.parent / "fr_nonh"
     env = create_env(cif, variables)
+    env["lda_plus_u"] = False
     create_pw_in(path, env, variables, calculation="scf")
     create_pw_in(path, env, variables, calculation="nscf")
     create_pw_in(path, env, variables, calculation="bands")
     create_band_in(path)
 # %%
-
+cif = "/home/CMD35/cmd35stud07/experiments/Ba2RhO4/Ba2RhO4_experiment.cif"
+path = "/home/CMD35/cmd35stud07/experiments/Ba2RhO4/fr_nonh"
+env = create_env(cif, variables)
+env["lda_plus_u"] = False
+create_pw_in(path, env, variables, calculation="scf")
+create_pw_in(path, env, variables, calculation="nscf")
+create_pw_in(path, env, variables, calculation="bands")
+create_band_in(path)
 
 # %%
 efermi = 0

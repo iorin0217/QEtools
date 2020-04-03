@@ -11,7 +11,7 @@ def create_pw_in(path, env, variables, calculation="scf"):
         "&CONTROL", f"calculation = '{calculation}'", f"pseudo_dir = '{variables['pseudo_dir']}'"]
     # &SYSTEM (no "/")
     systems = ["&SYSTEM", "ibrav = 0", f"nat = {nat}", f"ntyp = {len(atom_types)}",
-               f"ecutwfc = {env['ecutwfc']}", f"ecutrho = {env['ecutrho']}", f"occupations = '{variables['occupations']}''"]
+               f"ecutwfc = {env['ecutwfc']}", f"ecutrho = {env['ecutrho']}", f"occupations = '{variables['occupations']}'"]
     spin = []
     if env['nspin'] == 2:
         spin = ["nspin = 2"] + \
@@ -26,7 +26,7 @@ def create_pw_in(path, env, variables, calculation="scf"):
         soc = ["lspinorb = .true."]
     hubbard = []
     if env['lda_plus_u']:
-        hubbard = ["lda_plus_u = .true."] + ["lda_plus_u_kind = 0"] + [f"Hubbard_U({i+1}) = {env[atom]['Hubbard']['U']}" for i, atom in enumerate(
+        hubbard = ["lda_plus_u = .true."] + ["lda_plus_u_kind = 1"] + [f"Hubbard_U({i+1}) = {env[atom]['Hubbard']['U']}" for i, atom in enumerate(
             atom_types) if env[atom]['Hubbard'] and env[atom]['Hubbard'].get('U')] + [f"Hubbard_J0({i+1}) = {env[atom]['Hubbard']['J']}" for i, atom in enumerate(atom_types) if env[atom]['Hubbard'] and env[atom]['Hubbard'].get('J')]
     SSSH = systems + spin + soc + hubbard
     # &ELECTRONS (no "/")
