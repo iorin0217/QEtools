@@ -6,6 +6,7 @@ def create_pw_in(path, env, variables, calculation="scf"):
     atom_types = list(set(env['atoms']))
     nat = len(env['atoms'])
     # &CONTROL (no "/")
+    # TODO : restart_mode
     control = [
         "&CONTROL", f"calculation = '{calculation}'", f"pseudo_dir = '{variables['pseudo_dir']}'"]
     # &SYSTEM (no "/")
@@ -56,16 +57,14 @@ def create_pw_in(path, env, variables, calculation="scf"):
             ["/"] + SSSH + ["/"] + electrons + ["/"] + \
             ions + ["/"] + cell + ["/"] + CAA + kpoints
     elif calculation == "nscf":
-        nbnd = [f"nbnd = {env['nbnd']}"]
         kpoints = ["K_POINTS automatic",
                    f"{int(env['nk'][0])*2} {int(env['nk'][1])*2} {int(env['nk'][2])*2} 0 0 0"]
-        nscf_in = control + ["/"] + SSSH + nbnd + \
+        nscf_in = control + ["/"] + SSSH + \
             ["/"] + electrons + ["/"] + CAA + kpoints
     elif calculation == "bands":
-        nbnd = [f"nbnd = {env['nbnd']}"]
         kpath = ["K_POINTS crystal"] + [f"{len(env['bandpath'])}"] + [
             f"{kcoord[0]} {kcoord[1]} {kcoord[2]} 1.0" for kcoord in env['kpath']]
-        bands_in = control + ["/"] + SSSH + nbnd + \
+        bands_in = control + ["/"] + SSSH + \
             ["/"] + electrons + ["/"] + CAA + kpath
     tmp = repr('\n')
     eval(

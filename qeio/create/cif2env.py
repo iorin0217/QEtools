@@ -15,6 +15,7 @@ import itertools
 
 def create_env(structure_file, variables, extfields={"press": 0}, constraints={"symm": False}):
     # unsupport the occupation != 1 case
+    # TODO : conventional seekpath
     # we will deal with mcif: primitive=True
     env = {}
     if os.path.splitext(structure_file)[1][1:] == "cif":
@@ -79,7 +80,6 @@ def create_env(structure_file, variables, extfields={"press": 0}, constraints={"
     env["lspinorb"] = False
     env["nspin"] = 1
     env["lda_plus_u"] = False
-    env["nbnd"] = 0
     env["ecutwfc"] = 0
     env["ecutrho"] = 0
     env["time_reversal"] = True
@@ -99,7 +99,6 @@ def create_env(structure_file, variables, extfields={"press": 0}, constraints={"
         pseudo = elements[element]["pseudopotential"][variables["functional"]][SOC][pstype]
         env[atom] = {"pseudofile": pseudo["filename"], "Hubbard": Hubbard,
                      "starting_magnetization": 0}
-        env["nbnd"] += pseudo["nwfc"]
         env["ecutwfc"] = max(env["ecutwfc"], pseudo["cutoff"])
         env["ecutrho"] = max(
             env["ecutrho"], pseudo["cutoff"]*pseudo["dual"])
@@ -123,7 +122,6 @@ def create_env(structure_file, variables, extfields={"press": 0}, constraints={"
         [atomnum % 1000 for atomnum in skp["primitive_types"] if atomnum > 1000])
     env["atoms"] = [str(get_el_sp(atomnum % 1000))+f"{atomnum//1000+1}" if atomnum %
                     1000 in duplicated else str(get_el_sp(atomnum)) for atomnum in skp["primitive_types"]]
-    env["nbnd"] = sum([_nwfc[atom] for atom in env["atoms"]])
     env["pos"] = skp["primitive_positions"]
     # easy to access the structual property
     env["crystal"] = Structure(Lattice(env["avec"]), env["atoms"], env["pos"])

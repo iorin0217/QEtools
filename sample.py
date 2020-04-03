@@ -154,6 +154,7 @@ import json
 import os
 import re
 import itertools
+from pathlib import Path
 
 
 def create_env(structure_file, variables, extfields={"press": 0}, constraints={"symm": False}):
@@ -434,13 +435,16 @@ def create_dos_in(path, efermi, emin=-10, emax=10, deltae=0.05):
 # %%
 variables = {"reference_distance": 0.025, "dk_grid": 0.2, "occupations": "tetrahedra_opt",
              "diagonalization": "david", "mixing_beta": 0.2, "threshold": 1.0e-12, "functional": "PBE", "pseudo_dir": "/home/CMD35/cmd35stud07/QEtools/settings/pseudos"}
-path = "/home/CMD35/cmd35stud07/experiments/Sr2RuO4/fr"
-env = create_env(
-    "/home/CMD35/cmd35stud07/experiments/Sr2RuO4/Sr2RuO4_mp-4596_conventional_standard.cif", variables)
-create_pw_in(path, env, variables, calculation="scf")
-create_pw_in(path, env, variables, calculation="nscf")
-create_pw_in(path, env, variables, calculation="bands")
-create_band_in(path)
+# %%
+for cif in Path("/home/CMD35/cmd35stud07/experiments/").glob("Sr2*/*.cif"):
+    path = cif.parent / "fr"
+    env = create_env(cif, variables)
+    create_pw_in(path, env, variables, calculation="scf")
+    create_pw_in(path, env, variables, calculation="nscf")
+    create_pw_in(path, env, variables, calculation="bands")
+    create_band_in(path)
+# %%
+
 
 
 # %%
