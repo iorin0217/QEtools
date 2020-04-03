@@ -226,13 +226,12 @@ def create_env(structure_file, variables, extfields={"press": 0}, constraints={"
     env["ecutwfc"] = 0
     env["ecutrho"] = 0
     env["time_reversal"] = True
-    nwfc = {}
     with open("/home/CMD35/cmd35stud07/QEtools/settings/elements.json", "r") as f:
         elements = json.load(f)
     for atom in atom_types:
         element = re.match(r"\D+", atom).group()  # double count exists
         SOC = elements[element]["default"]["SOC"]
-        Hubbard = elements[element]["default"]["Hubbard"]["U"]
+        Hubbard = elements[element]["default"]["Hubbard"]
         pstype = elements[element]["default"]["pstype"]
         if SOC == "fr":
             env["lspinorb"] = True
@@ -245,7 +244,6 @@ def create_env(structure_file, variables, extfields={"press": 0}, constraints={"
         env["ecutwfc"] = max(env["ecutwfc"], pseudo["cutoff"])
         env["ecutrho"] = max(
             env["ecutrho"], pseudo["cutoff"]*pseudo["dual"])
-        nwfc[atom] = int(pseudo["nwfc"])
     if spin_structure:
         parallel = False
         for i, j in itertools.permutations(spin_structure, 2):
@@ -346,8 +344,8 @@ def create_pw_in(path, env, variables, calculation="scf"):
         soc = ["lspinorb = .true."]
     hubbard = []
     if env['lda_plus_u']:
-        hubbard = ["lda_plus_u = .true."] + ["lda_plus_u_kind = 1"] + [f"Hubbard_U({i+1}) = {env[atom]['Hubbard_U']}" for i,
-                                                                       atom in enumerate(atom_types) if env[atom]['Hubbard_U']]
+        hubbard = ["lda_plus_u = .true."] + ["lda_plus_u_kind = 1"] + [f"Hubbard_U({i+1}) = {env[atom]['Hubbard']['U']}" for i, atom in enumerate(
+            atom_types) if env[atom]['Hubbard']['U']] + [f"Hubbard_J0({i+1}) = {env[atom]['Hubbard']['J']}" for i, atom in enumerate(atom_types) if env[atom]['Hubbard']['J']]
     SSSH = systems + spin + soc + hubbard
     # &ELECTRONS (no "/")
     electrons = ["&ELECTRONS", f"conv_thr = {float(nat)*variables['threshold']}",

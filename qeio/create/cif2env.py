@@ -83,13 +83,12 @@ def create_env(structure_file, variables, extfields={"press": 0}, constraints={"
     env["ecutwfc"] = 0
     env["ecutrho"] = 0
     env["time_reversal"] = True
-    _nwfc = {}
     with open("../../settings/elements.json", "r") as f:
         elements = json.load(f)
     for atom in atom_types:
         element = re.match(r"\D+", atom).group()  # double count exists
         SOC = elements[element]["default"]["SOC"]
-        Hubbard = elements[element]["default"]["Hubbard"]["U"]
+        Hubbard = elements[element]["default"]["Hubbard"]
         pstype = elements[element]["default"]["pstype"]
         if SOC == "fr":
             env["lspinorb"] = True
@@ -102,7 +101,6 @@ def create_env(structure_file, variables, extfields={"press": 0}, constraints={"
         env["ecutwfc"] = max(env["ecutwfc"], pseudo["cutoff"])
         env["ecutrho"] = max(
             env["ecutrho"], pseudo["cutoff"]*pseudo["dual"])
-        _nwfc[atom] = int(pseudo["nwfc"])
     if spin_structure:
         parallel = False
         for i, j in itertools.permutations(spin_structure, 2):
