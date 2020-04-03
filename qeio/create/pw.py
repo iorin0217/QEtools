@@ -42,7 +42,7 @@ def create_pw_in(path, env, variables, calculation="scf"):
 
     if calculation == "scf":
         kpoints = ["K_POINTS automatic",
-                   f"{int(variables['nk'][0])} {int(variables['nk'][1])} {int(variables['nk'][2])} 0 0 0"]
+                   f"{int(env['nk'][0])} {int(env['nk'][1])} {int(env['nk'][2])} 0 0 0"]
         scf_in = control + ["/"] + SSSH + ["/"] + \
             electrons + ["/"] + CAA + kpoints
     elif calculation == "vcrelax":
@@ -51,14 +51,14 @@ def create_pw_in(path, env, variables, calculation="scf"):
         cell = ["&CELL", "cell_dynamics = 'bfgs'",
                 f"press = {env['press']}"]
         kpoints = ["K_POINTS automatic",
-                   f"{int(variables['nk'][0])} {int(variables['nk'][1])} {int(variables['nk'][2])} 0 0 0"]
+                   f"{int(env['nk'][0])} {int(env['nk'][1])} {int(env['nk'][2])} 0 0 0"]
         vcrelax_in = control + conv_thr + \
             ["/"] + SSSH + ["/"] + electrons + ["/"] + \
             ions + ["/"] + cell + ["/"] + CAA + kpoints
     elif calculation == "nscf":
         nbnd = [f"nbnd = {env['nbnd']}"]
         kpoints = ["K_POINTS automatic",
-                   f"{int(variables['nk'][0])*2} {int(variables['nk'][1])*2} {int(variables['nk'][2])*2} 0 0 0"]
+                   f"{int(env['nk'][0])*2} {int(env['nk'][1])*2} {int(env['nk'][2])*2} 0 0 0"]
         nscf_in = control + ["/"] + SSSH + nbnd + \
             ["/"] + electrons + ["/"] + CAA + kpoints
     elif calculation == "bands":

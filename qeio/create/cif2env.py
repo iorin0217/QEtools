@@ -170,7 +170,9 @@ def create_env(structure_file, variables, extfields={"press": 0}, constraints={"
                           [_start]] = skp["path"][ipath][0]
     env["kticks"][skp["explicit_kpoints_linearcoord"][-1]
                   ] = skp["path"][-1][1]  # retrieve the final point
-
+    _nks = np.round(np.linalg.norm(
+        env["bvec"], axis=0) / variables["dk_grid"])
+    env["nk"] = np.where(nks < 1, 1, _nks)
     # extfields, constraints
     # hdf5
 
