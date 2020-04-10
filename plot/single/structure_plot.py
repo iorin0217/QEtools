@@ -3,7 +3,9 @@ from scipy.spatial import Voronoi
 import plotly.offline as pltly
 import plotly.graph_objs as go
 import re
-
+from mendeleev import element
+from pymatgen import Structure, Lattice
+from pymatgen.core.periodic_table import Element
 '''
 python structure_plot.py /path/to/env/file
 This code automatically search the input files:
@@ -16,29 +18,113 @@ This code plots:
 '''
 
 
-def draw_structure(structure_title, crystal_structure, spin_structure):
-    structure_layout = go.Layout(title=structure_title, xaxis=,)
-    structure_figure = go.Figure(data=structure, layout=structure_layout)
-    return structure_figure
+def draw_crystal(crystal_title, structure):
+    # TODO : spin structure
+    data = []
+    annotations = []
+    # 球
+    dist = np.linspace(0, 1, 12)
+    theta = 2*np.pi*dist
+    phi = np.arccos(2*dist-1)
+    rx = np.outer(np.cos(theta), np.sin(phi))
+    ry = np.outer(np.sin(theta), np.sin(phi))
+    rz = np.outer(np.ones(12), np.cos(phi))
+    ''' TODO : bonds
+    bonds = {}
+    for i in range(len(structure)):
+    nears = BrunnerNN_real().get_nn_info(structure,i)
+    bonds[structure[i]] = [near["site"] for near in nears if all([0<= n <= 1 for n in list(near["image"])]) & (not bonds.get(near["site"]))]
+    '''
+    # make supercell to get boundary atoms
+    structure_copy = structure.copy()
+    structure_copy.make_supercell(
+        [[2, 0, 0], [0, 2, 0], [0, 0, 2]], to_unit_cell=False)
+    sites = [site_copy for site_copy in structure_copy if all(
+        [-0.00001 <= frac <= 0.50001 for frac in site_copy.frac_coords])]
+    # node
+    for site in set(sites):
+        coord = site.coords
+        el = site.species_string
+        r = float(Element(el).atomic_radius)
+        atomTrace = go.Mesh3d(
+            x=(coord[0]+r*rx).flatten(),
+            y=(coord[1]+r*ry).flatten(),
+            z=(coord[2]+r*rz).flatten(),
+            alphahull=0,
+            color=element(el).jmol_color,
+            hoverinfo='none'
+        )
+        data.append(atomTrace)
+    # edge
 
+    # unitcell
 
-struct_layout = html.Div(
-    Simple3DSceneComponent(
-        id=self.id("scene"),
-        data=self.initial_data["scene"],
-        settings=self.initial_scene_settings,
-    ),
-    style={
-        "width": "100%",
-        "height": "100%",
-        "overflow": "hidden",
-        "margin": "0 auto",
-    },
-)
+    def get_edgeTrace(edge):
+        x, y, z = zip(*edge)
+        edgeTrace = go.Scatter3d(
+            x=x,
+            y=y,
+            z=z,
+            mode='lines',
+            line=dict(color="#666666"),
+            showlegend=False,
+            hoverinfo='none'
+        )
+        return edgeTrace
+
+    v0 = [0, 0, 0]
+    v1, v2, v3 = structure.lattice.matrix
+    v4, v5, v6, v7 = v2+v3, v1+v3, v1+v2, v1+v2+v3
+    edges = [[v0, v1], [v0, v2], [v0, v3], [v1, v5], [v1, v6], [v2, v4],
+             [v2, v6], [v3, v4], [v3, v5], [v4, v7], [v5, v7], [v6, v7]]
+    for edge in edges:
+        data.append(get_edgeTrace(edge))
+    # axis
+    xyz = np.array([[1, 0, 0], [0, 1, 0], [0, 0, 1]])
+    xyz_name = ["x", "y", "z"]
+    scale = np.max(np.array([site.coords for site in sites]), axis=0)
+    for i, axis in enumerate(xyz):
+        data.append(go.Scatter3d(
+            x=[0, axis[0]*scale[0]*2],
+            y=[0, axis[1]*scale[1]*2],
+            z=[0, axis[2]*scale[2]*2],
+            mode='lines',
+            line=dict(
+                color='rgb(100,100,200)',
+                width=5
+            ),
+            hoverinfo='none'
+        ))
+        annotations.append(
+            dict(
+                showarrow=False, x=axis[0]*scale[0]*2, y=axis[1]*scale[1]*2, z=axis[2]*scale[2]*2, text=f"{xyz_name[i]}"
+            ))
+    abc = structure.lattice.matrix / \
+        np.linalg.norm(structure.lattice.matrix, axis=1)
+    abc_name = ["a", "b", "c"]
+    displace = scale[0]
+    for i, axis in enumerate(abc):
+        data.append(go.Scatter3d(
+            x=[-displace, axis[0]-displace],
+            y=[0, axis[1]],
+            z=[0, axis[2]],
+            mode='lines',
+            line=dict(
+                color='rgb(100,100,200)',
+                width=5
+            ),
+            hoverinfo='none'
+        ))
+        annotations.append(
+            dict(
+                showarrow=False, x=axis[0]-displace, y=axis[1], z=axis[2], text=f"{abc_name[i]}"
+            ))
+    crystal_figure = go.Figure(data=data, layout=layout(annotations))
+    return crystal_figure
 
 
 def draw_BZ(BZ_title, bvec, klabel):
-    # special_point_annotation
+    # TODO : special_point_annotation
     kpoints = []
     for i in range(-1, 2):
         for j in range(-1, 2):
@@ -83,32 +169,45 @@ def draw_BZ(BZ_title, bvec, klabel):
                 showarrow=False, x=axis[0], y=axis[1], z=axis[2], text=f"b{i}"
             ))
         i += 1
-    BZ_layout = go.Layout(title=BZ_title, scene=dict(
-        xaxis_showgrid=False,
-        xaxis_showline=False,
-        xaxis_showticklabels=False,
-        xaxis_zeroline=False,
-        xaxis_autorange=True,
-        xaxis_showbackground=False,
-        xaxis_title=' ',
-        yaxis_showgrid=False,
-        yaxis_showline=False,
-        yaxis_showticklabels=False,
-        yaxis_zeroline=False,
-        yaxis_autorange=True,
-        yaxis_title=' ',
-        yaxis_showbackground=False,
-        zaxis_showgrid=False,
-        zaxis_showline=False,
-        zaxis_showticklabels=False,
-        zaxis_zeroline=False,
-        zaxis_autorange=True,
-        zaxis_showbackground=False,
-        zaxis_title=' ',
-        annotations=annotations),
-        showlegend=False)
-    BZ_figure = go.Figure(data=BZ, layout=BZ_layout)
+    BZ_figure = go.Figure(data=BZ, layout=layout(annotations))
     return BZ_figure
+
+
+def layout(annotations):
+    layout = go.Layout(
+        scene=dict(
+            xaxis=dict(
+                showspikes=False,
+                showgrid=False,
+                zeroline=False,
+                ticks='',
+                title='',
+                showticklabels=False,
+                showbackground=False
+            ),
+            yaxis=dict(
+                showspikes=False,
+                showgrid=False,
+                zeroline=False,
+                ticks='',
+                title='',
+                showticklabels=False,
+                showbackground=False
+            ),
+            zaxis=dict(
+                showspikes=False,
+                showgrid=False,
+                zeroline=False,
+                ticks='',
+                title='',
+                showticklabels=False,
+                showbackground=False
+            ),
+            annotations=annotations
+        ),
+        showlegend=False
+    )
+    return layout
 
 
 if __name__ == '__main__':

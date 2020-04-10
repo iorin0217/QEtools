@@ -391,9 +391,8 @@ def create_pw_in(path, env, variables, calculation="scf"):
 # %%
 
 
-def create_projwfc_in(path, efermi, emin=-5, emax=5, deltae=0.01):
-    projwfc_temp = [
-        "&PROJWFC", f"emin = {efermi+emin}", f"emax = {efrmi+emax}", f"deltae = {deltae}", "/"]
+def create_projwfc_in(path, deltae=0.01):
+    projwfc_temp = ["&PROJWFC", f"deltae = {deltae}", "/"]
     print(*projwfc_temp, sep="\n", end="\n",
           file=open(f"{path}/projwfc.in", "w"))
 
@@ -407,17 +406,25 @@ def create_band_in(path, nspin=1, plot_2d=".false."):
         print(*band_temp, sep="\n", end="\n",
               file=open(f"{path}/band.in", "w"))
     elif nspin == 2:
-        band_temp_cp = band_temp[:]
+        band_temp_dn = band_temp[:]
         band_temp += ["filband = 'band_up.out'", "spin_component = 1", "/"]
-        band_temp_cp += ["filband = 'band_dn.out'", "spin_component = 2", "/"]
+        band_temp_dn += ["filband = 'band_dn.out'", "spin_component = 2", "/"]
         print(*band_temp, sep="\n", end="\n",
               file=open(f"{path}/band_up.in", "w"))
-        print(*band_temp, sep="\n", end="\n",
+        print(*band_temp_dn, sep="\n", end="\n",
               file=open(f"{path}/band_dn.in", "w"))
     elif nspin == 4:
-        band_temp += ["filband = 'band_s.out'", "lsigma = .true.", "/"]
+        band_temp_y = band_temp[:]
+        band_temp_z = band_temp[:]
+        band_temp += ["filband = 'band_s.out'", "lsigma(1) = .true.", "/"]
+        band_temp_y += ["filband = 'band_s.out'", "lsigma(2) = .true.", "/"]
+        band_temp_z += ["filband = 'band_s.out'", "lsigma(3) = .true.", "/"]
         print(*band_temp, sep="\n", end="\n",
-              file=open(f"{path}/band_s.in", "w"))
+              file=open(f"{path}/band_sx.in", "w"))
+        print(*band_temp_y, sep="\n", end="\n",
+              file=open(f"{path}/band_sy.in", "w"))
+        print(*band_temp_z, sep="\n", end="\n",
+              file=open(f"{path}/band_sz.in", "w"))
 # %%
 
 
@@ -425,6 +432,16 @@ def create_dos_in(path, efermi, emin=-10, emax=10, deltae=0.05):
     dos_temp = ["&DOS", f"emin = {efermi+emin}",
                 f"emax = {efrmi+emax}", f"deltae = {deltae}", "/"]
     print(*dos_temp, sep="\n", end="\n", file=open(f"{path}/dos.in", "w"))
+
+# %%
+
+
+def create_job_sh(path):
+    pbs = ["#!/bin/bash -f", "# $ -pe smp 8", "# $ -cwd", "# $ -N job_name"]
+    default = ["mpirun - np $NSLOTS / home/CMD35/cmd35stud07/QE6.4.1/bin/pw.x - in scf.in | tee scf.out", "mpirun - np $NSLOTS / home/CMD35/cmd35stud07/QE6.4.1/bin/pw.x - in nscf.in | tee nscf.out", "mpirun -np $NSLOTS /home/CMD35/cmd35stud07/QE6.4.1/bin/fermi_velocity.x -in nscf.in | tee fermi_velocity.out",
+               "mpirun -np $NSLOTS /home/CMD35/cmd35stud07/QE6.4.1/bin/projwfc.x -in projwfc.in | tee projwfc.out", "mpirun -np $NSLOTS /home/CMD35/cmd35stud07/QE6.4.1/bin/pw.x -in bands.in | tee bands.out", "mpirun -np $NSLOTS /home/CMD35/cmd35stud07/QE6.4.1/bin/bands.x -in band.in"]
+    job_sh = pbs+default
+    print(*job_sh, sep="\n", end="\n", file=open(f"{path}/job.sh", "w"))
 
 
 # %%
@@ -441,15 +458,14 @@ for cif in Path("/home/CMD35/cmd35stud07/experiments/").glob("Sr2*/*.cif"):
     create_band_in(path)
 # %%
 cif = "/home/CMD35/cmd35stud07/experiments/Ba2RhO4/Ba2RhO4_experiment.cif"
-path = "/home/CMD35/cmd35stud07/experiments/Ba2RhO4/fr_nonh"
+path = "/home/CMD35/cmd35stud07/experiments/Ba2RhO4/fr"
 env = create_env(cif, variables)
 env["lda_plus_u"] = False
 create_pw_in(path, env, variables, calculation="scf")
 create_pw_in(path, env, variables, calculation="nscf")
 create_pw_in(path, env, variables, calculation="bands")
-create_band_in(path)
+create_projwfc_in(path)
+create_band_in(path, nspin=1)
+create_job_sh(path)
 
 # %%
-efermi = 0
-create_dos_in(path, efermi)
-create_projwfc_in(path, efermi)
