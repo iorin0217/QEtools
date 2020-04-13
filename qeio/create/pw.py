@@ -11,7 +11,7 @@ def create_pw_in(path, env, variables, calculation="scf"):
         "&CONTROL", f"calculation = '{calculation}'", f"pseudo_dir = '{variables['pseudo_dir']}'"]
     # &SYSTEM (no "/")
     systems = ["&SYSTEM", "ibrav = 0", f"nat = {nat}", f"ntyp = {len(atom_types)}",
-               f"ecutwfc = {env['ecutwfc']}", f"ecutrho = {env['ecutrho']}", f"occupations = '{variables['occupations']}'"]
+               f"ecutwfc = {env['ecutwfc']}", f"ecutrho = {env['ecutrho']}"]
     spin = []
     if env['nspin'] == 2:
         spin = ["nspin = 2"] + \
@@ -44,7 +44,7 @@ def create_pw_in(path, env, variables, calculation="scf"):
     if calculation == "scf":
         kpoints = ["K_POINTS automatic",
                    f"{int(env['nk'][0])} {int(env['nk'][1])} {int(env['nk'][2])} 0 0 0"]
-        scf_in = control + ["/"] + SSSH + ["/"] + \
+        scf_in = control + ["/"] + SSSH + [f"occupations = '{variables['occupations']}'", "/"] + \
             electrons + ["/"] + CAA + kpoints
     elif calculation == "vcrelax":
         conv_thr = ["etot_conv_thr = 1.0e-5", "forc_conv_thr = 1.0e-4"]
@@ -54,13 +54,14 @@ def create_pw_in(path, env, variables, calculation="scf"):
         kpoints = ["K_POINTS automatic",
                    f"{int(env['nk'][0])} {int(env['nk'][1])} {int(env['nk'][2])} 0 0 0"]
         vcrelax_in = control + conv_thr + \
-            ["/"] + SSSH + ["/"] + electrons + ["/"] + \
+            ["/"] + SSSH + [f"occupations = '{variables['occupations']}'", "/"] + electrons + ["/"] + \
             ions + ["/"] + cell + ["/"] + CAA + kpoints
     elif calculation == "nscf":
         kpoints = ["K_POINTS automatic",
                    f"{int(env['nk'][0])*2} {int(env['nk'][1])*2} {int(env['nk'][2])*2} 0 0 0"]
         nscf_in = control + ["/"] + SSSH + \
-            ["/"] + electrons + ["/"] + CAA + kpoints
+            [f"occupations = '{variables['occupations']}'",
+                "/"] + electrons + ["/"] + CAA + kpoints
     elif calculation == "bands":
         kpath = ["K_POINTS crystal"] + [f"{len(env['bandpath'])}"] + [
             f"{kcoord[0]} {kcoord[1]} {kcoord[2]} 1.0" for kcoord in env['kpath']]

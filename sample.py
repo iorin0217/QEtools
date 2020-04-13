@@ -325,11 +325,12 @@ def create_pw_in(path, env, variables, calculation="scf"):
     atom_types = list(set(env['atoms']))
     nat = len(env['atoms'])
     # &CONTROL (no "/")
+    # TODO : restart_mode
     control = [
         "&CONTROL", f"calculation = '{calculation}'", f"pseudo_dir = '{variables['pseudo_dir']}'"]
     # &SYSTEM (no "/")
     systems = ["&SYSTEM", "ibrav = 0", f"nat = {nat}", f"ntyp = {len(atom_types)}",
-               f"ecutwfc = {env['ecutwfc']}", f"ecutrho = {env['ecutrho']}", f"occupations = '{variables['occupations']}'"]
+               f"ecutwfc = {env['ecutwfc']}", f"ecutrho = {env['ecutrho']}"]
     spin = []
     if env['nspin'] == 2:
         spin = ["nspin = 2"] + \
@@ -362,7 +363,7 @@ def create_pw_in(path, env, variables, calculation="scf"):
     if calculation == "scf":
         kpoints = ["K_POINTS automatic",
                    f"{int(env['nk'][0])} {int(env['nk'][1])} {int(env['nk'][2])} 0 0 0"]
-        scf_in = control + ["/"] + SSSH + ["/"] + \
+        scf_in = control + ["/"] + SSSH + [f"occupations = '{variables['occupations']}'", "/"] + \
             electrons + ["/"] + CAA + kpoints
     elif calculation == "vcrelax":
         conv_thr = ["etot_conv_thr = 1.0e-5", "forc_conv_thr = 1.0e-4"]
@@ -372,13 +373,14 @@ def create_pw_in(path, env, variables, calculation="scf"):
         kpoints = ["K_POINTS automatic",
                    f"{int(env['nk'][0])} {int(env['nk'][1])} {int(env['nk'][2])} 0 0 0"]
         vcrelax_in = control + conv_thr + \
-            ["/"] + SSSH + ["/"] + electrons + ["/"] + \
+            ["/"] + SSSH + [f"occupations = '{variables['occupations']}'", "/"] + electrons + ["/"] + \
             ions + ["/"] + cell + ["/"] + CAA + kpoints
     elif calculation == "nscf":
         kpoints = ["K_POINTS automatic",
                    f"{int(env['nk'][0])*2} {int(env['nk'][1])*2} {int(env['nk'][2])*2} 0 0 0"]
         nscf_in = control + ["/"] + SSSH + \
-            ["/"] + electrons + ["/"] + CAA + kpoints
+            [f"occupations = '{variables['occupations']}'",
+                "/"] + electrons + ["/"] + CAA + kpoints
     elif calculation == "bands":
         kpath = ["K_POINTS crystal"] + [f"{len(env['bandpath'])}"] + [
             f"{kcoord[0]} {kcoord[1]} {kcoord[2]} 1.0" for kcoord in env['kpath']]
@@ -391,10 +393,13 @@ def create_pw_in(path, env, variables, calculation="scf"):
 # %%
 
 
-def create_projwfc_in(path, deltae=0.01):
-    projwfc_temp = ["&PROJWFC", f"deltae = {deltae}", "/"]
-    print(*projwfc_temp, sep="\n", end="\n",
-          file=open(f"{path}/projwfc.in", "w"))
+def create_projwfc_in(path, variables):
+    projwfc_temp = ["&PROJWFC", f"deltae = {variables['deltae']}"]
+    pdos_in = projwfc_temp+[f"deltae = {variables['deltae']}", "/"]
+    fatband_in = projwfc_temp+["lsym=.false.", "/"]
+    print(*pdos_in, sep="\n", end="\n", file=open(f"{path}/pdos.in", "w"))
+    print(*fatband_in, sep="\n", end="\n",
+          file=open(f"{path}/fatbands.in", "w"))
 
 # %%
 
@@ -425,28 +430,21 @@ def create_band_in(path, nspin=1, plot_2d=".false."):
               file=open(f"{path}/band_sy.in", "w"))
         print(*band_temp_z, sep="\n", end="\n",
               file=open(f"{path}/band_sz.in", "w"))
-# %%
-
-
-def create_dos_in(path, efermi, emin=-10, emax=10, deltae=0.05):
-    dos_temp = ["&DOS", f"emin = {efermi+emin}",
-                f"emax = {efrmi+emax}", f"deltae = {deltae}", "/"]
-    print(*dos_temp, sep="\n", end="\n", file=open(f"{path}/dos.in", "w"))
 
 # %%
 
 
 def create_job_sh(path):
-    pbs = ["#!/bin/bash -f", "# $ -pe smp 8", "# $ -cwd", "# $ -N job_name"]
-    default = ["mpirun - np $NSLOTS / home/CMD35/cmd35stud07/QE6.4.1/bin/pw.x - in scf.in | tee scf.out", "mpirun - np $NSLOTS / home/CMD35/cmd35stud07/QE6.4.1/bin/pw.x - in nscf.in | tee nscf.out", "mpirun -np $NSLOTS /home/CMD35/cmd35stud07/QE6.4.1/bin/fermi_velocity.x -in nscf.in | tee fermi_velocity.out",
-               "mpirun -np $NSLOTS /home/CMD35/cmd35stud07/QE6.4.1/bin/projwfc.x -in projwfc.in | tee projwfc.out", "mpirun -np $NSLOTS /home/CMD35/cmd35stud07/QE6.4.1/bin/pw.x -in bands.in | tee bands.out", "mpirun -np $NSLOTS /home/CMD35/cmd35stud07/QE6.4.1/bin/bands.x -in band.in"]
+    pbs = ["#!/bin/bash -f", "#$ -pe smp 8", "#$ -cwd", "#$ -N job_name"]
+    default = ["mpirun -np $NSLOTS /home/CMD35/cmd35stud07/QE6.4.1/bin/pw.x -in scf.in | tee scf.out", "mpirun -np $NSLOTS /home/CMD35/cmd35stud07/QE6.4.1/bin/pw.x -in nscf.in | tee nscf.out", "mpirun -np $NSLOTS /home/CMD35/cmd35stud07/QE6.4.1/bin/fermi_velocity.x -in nscf.in | tee fermi_velocity.out",
+               "mpirun -np $NSLOTS /home/CMD35/cmd35stud07/QE6.4.1/bin/projwfc.x -in pdos.in | tee pdos.out", "mpirun -np $NSLOTS /home/CMD35/cmd35stud07/QE6.4.1/bin/pw.x -in bands.in | tee bands.out", "mpirun -np $NSLOTS /home/CMD35/cmd35stud07/QE6.4.1/bin/projwfc.x -in fatbands.in | tee fatbands.out", "mpirun -np $NSLOTS /home/CMD35/cmd35stud07/QE6.4.1/bin/bands.x -in band.in"]
     job_sh = pbs+default
     print(*job_sh, sep="\n", end="\n", file=open(f"{path}/job.sh", "w"))
 
 
 # %%
 variables = {"reference_distance": 0.025, "dk_grid": 0.2, "occupations": "tetrahedra_opt", "diago_full_acc": ".true.",
-             "diagonalization": "david", "mixing_beta": 0.2, "threshold": 1.0e-12, "functional": "PBE", "pseudo_dir": "/home/CMD35/cmd35stud07/QEtools/settings/pseudos"}
+             "diagonalization": "david", "mixing_beta": 0.2, "threshold": 1.0e-12, "functional": "PBE", "pseudo_dir": "/home/CMD35/cmd35stud07/QEtools/settings/pseudos", "deltae": 0.01}
 # %%
 for cif in Path("/home/CMD35/cmd35stud07/experiments/").glob("Sr2*/*.cif"):
     path = cif.parent / "fr_nonh"
@@ -457,14 +455,14 @@ for cif in Path("/home/CMD35/cmd35stud07/experiments/").glob("Sr2*/*.cif"):
     create_pw_in(path, env, variables, calculation="bands")
     create_band_in(path)
 # %%
-cif = "/home/CMD35/cmd35stud07/experiments/Ba2RhO4/Ba2RhO4_experiment.cif"
-path = "/home/CMD35/cmd35stud07/experiments/Ba2RhO4/fr"
+cif = "/home/CMD35/cmd35stud07/experiments/Sr2RhO4/Sr2RhO4_mp-757102_conventional_standard.cif"
+path = "/home/CMD35/cmd35stud07/experiments/Sr2RhO4/"
 env = create_env(cif, variables)
 env["lda_plus_u"] = False
 create_pw_in(path, env, variables, calculation="scf")
 create_pw_in(path, env, variables, calculation="nscf")
 create_pw_in(path, env, variables, calculation="bands")
-create_projwfc_in(path)
+create_projwfc_in(path, variables)
 create_band_in(path, nspin=1)
 create_job_sh(path)
 
