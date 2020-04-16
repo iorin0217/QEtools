@@ -34,11 +34,13 @@ def find_orbitals_from_statelines(out_info_dict):
             state_dict['atomnum'] = int(atomnum_re.findall(state_line)[0])
             state_dict['atomnum'] -= 1  # to keep with orbital indexing
             state_dict['kind_name'] = element_re.findall(state_line)[0].strip()
-            state_dict['angular_momentum'] = int(lnum_re.findall(state_line)[0])
+            state_dict['angular_momentum'] = int(
+                lnum_re.findall(state_line)[0])
             state_dict['magnetic_number'] = int(mnum_re.findall(state_line)[0])
             state_dict['magnetic_number'] -= 1  # to keep with orbital indexing
         except ValueError:
-            raise QEOutputParsingError('State lines are not formatted in a standard way.')
+            raise QEOutputParsingError(
+                'State lines are not formatted in a standard way.')
         state_dicts.append(state_dict)
 
     # here is some logic to figure out the value of radial_nodes to use
@@ -77,7 +79,7 @@ def spin_dependent_subparser(out_info_dict):
 
     out_file = out_info_dict['out_file']
     spin_down = out_info_dict['spin_down']
-    od = out_info_dict  #using a shorter name for convenience
+    od = out_info_dict  # using a shorter name for convenience
     #   regular expressions needed for later parsing
     WaveFraction1_re = re.compile(r'\=(.*?)\*')  # state composition 1
     WaveFractionremain_re = re.compile(r'\+(.*?)\*')  # state comp 2
@@ -102,7 +104,7 @@ def spin_dependent_subparser(out_info_dict):
                     # pre ~6.3 output format? "==== e("
                     val = out_file[out_ind].split()[4]
                 bands[i % od['k_states']][j % od['num_bands']] = val
-                #subloop grabs pdos
+                # subloop grabs pdos
                 wave_fraction = []
                 wave_id = []
                 for k in range(od['e_lines'][j] + 1, od['psi_lines'][j], 1):
@@ -115,18 +117,22 @@ def spin_dependent_subparser(out_info_dict):
                 for l in range(len(wave_id)):
                     wave_id[l] = int(wave_id[l])
                     wave_fraction[l] = float(wave_fraction[l])
-                    #sets relevant values in pdos_array
-                    projection_arrays[i % od['k_states']][j % od['num_bands']][wave_id[l] - 1] = wave_fraction[l]
+                    # sets relevant values in pdos_array
+                    projection_arrays[i % od['k_states']][j %
+                                                          od['num_bands']][wave_id[l] - 1] = wave_fraction[l]
     except IndexError:
-        raise QEOutputParsingError('the standard out file does not ' 'comply with the official ' 'documentation.')
+        raise QEOutputParsingError(
+            'the standard out file does not ' 'comply with the official ' 'documentation.')
 
     bands_data = BandsData()
     # Attempts to retrieve the kpoints from the parent calc
     parent_calc = out_info_dict['parent_calc']
     try:
-        parent_kpoints = parent_calc.get_incoming(link_label_filter='kpoints').one().node
+        parent_kpoints = parent_calc.get_incoming(
+            link_label_filter='kpoints').one().node
     except ValueError:
-        raise QEOutputParsingError('The parent had no input kpoints! Cannot parse from this!')
+        raise QEOutputParsingError(
+            'The parent had no input kpoints! Cannot parse from this!')
     try:
         if len(od['k_vect']) != len(parent_kpoints.get_kpoints()):
             raise AttributeError
@@ -152,7 +158,7 @@ def spin_dependent_subparser(out_info_dict):
         if np.shape(projection) != np.shape(bands):
             raise AttributeError('Projections not the same shape as the bands')
 
-    #insert here some logic to assign pdos to the orbitals
+    # insert here some logic to assign pdos to the orbitals
     pdos_arrays = spin_dependent_pdos_subparser(out_info_dict)
     energy_arrays = [out_info_dict['energy']] * len(orbitals)
     projection_data.set_projectiondata(
@@ -231,7 +237,8 @@ class ProjwfcParser(Parser):
 
         # Read standard out
         try:
-            filename_stdout = self.node.get_option('output_filename')  # or get_attribute(), but this is clearer
+            # or get_attribute(), but this is clearer
+            filename_stdout = self.node.get_option('output_filename')
             with out_folder.open(filename_stdout, 'r') as fil:
                 out_file = fil.readlines()
         except OSError:
@@ -283,7 +290,8 @@ class ProjwfcParser(Parser):
         try:
             new_nodes_list = self._parse_bands_and_projections(out_info_dict)
         except QEOutputParsingError as err:
-            self.logger.error('Error parsing bands and projections: {}'.format(err))
+            self.logger.error(
+                'Error parsing bands and projections: {}'.format(err))
             traceback.print_exc()
             return self.exit_codes.ERROR_PARSING_PROJECTIONS
         for linkname, node in new_nodes_list:
@@ -322,11 +330,14 @@ class ProjwfcParser(Parser):
 
         # Basic check
         if len(out_info_dict['e_lines']) != len(out_info_dict['psi_lines']):
-            raise QEOutputParsingError('e-lines and psi-lines are in different number')
+            raise QEOutputParsingError(
+                'e-lines and psi-lines are in different number')
         if len(out_info_dict['psi_lines']) % len(out_info_dict['k_lines']) != 0:
-            raise QEOutputParsingError('Band Energy Points is not a multiple of kpoints')
+            raise QEOutputParsingError(
+                'Band Energy Points is not a multiple of kpoints')
         # calculates the number of bands
-        out_info_dict['num_bands'] = len(out_info_dict['psi_lines']) // len(out_info_dict['k_lines'])
+        out_info_dict['num_bands'] = len(
+            out_info_dict['psi_lines']) // len(out_info_dict['k_lines'])
 
         # Uses the parent input parameters, and checks if the parent used
         # spin calculations. Try to replace with a query, if possible.
@@ -336,16 +347,21 @@ class ProjwfcParser(Parser):
                                                             link_type=LinkType.CREATE).one().node
             )
         except ValueError as e:
-            raise QEOutputParsingError('Could not get parent calculation of input folder: {}'.format(e))
+            raise QEOutputParsingError(
+                'Could not get parent calculation of input folder: {}'.format(e))
         out_info_dict['parent_calc'] = parent_calc
         try:
-            parent_param = parent_calc.get_outgoing(link_label_filter='output_parameters').one().node
+            parent_param = parent_calc.get_outgoing(
+                link_label_filter='output_parameters').one().node
         except ValueError:
-            raise QEOutputParsingError('The parent had no output_parameters! Cannot parse from this!')
+            raise QEOutputParsingError(
+                'The parent had no output_parameters! Cannot parse from this!')
         try:
-            structure = parent_calc.get_incoming(link_label_filter='structure').one().node
+            structure = parent_calc.get_incoming(
+                link_label_filter='structure').one().node
         except ValueError:
-            raise QEOutputParsingError('The parent had no input structure! Cannot parse from this!')
+            raise QEOutputParsingError(
+                'The parent had no input structure! Cannot parse from this!')
         try:
             nspin = parent_param.get_dict()['number_of_spin_components']
             if nspin != 1:
@@ -361,14 +377,17 @@ class ProjwfcParser(Parser):
         out_info_dict['k_states'] = len(out_info_dict['k_lines'])
         if spin:
             if out_info_dict['k_states'] % 2 != 0:
-                raise QEOutputParsingError('Internal formatting error regarding spin')
+                raise QEOutputParsingError(
+                    'Internal formatting error regarding spin')
             out_info_dict['k_states'] = out_info_dict['k_states'] // 2
 
         #   adds in the k-vector for each kpoint
-        k_vect = [out_file[out_info_dict['k_lines'][i]].split()[2:] for i in range(out_info_dict['k_states'])]
+        k_vect = [out_file[out_info_dict['k_lines'][i]].split()[2:]
+                  for i in range(out_info_dict['k_states'])]
         out_info_dict['k_vect'] = np.array(k_vect)
         out_info_dict['structure'] = structure
-        out_info_dict['orbitals'] = find_orbitals_from_statelines(out_info_dict)
+        out_info_dict['orbitals'] = find_orbitals_from_statelines(
+            out_info_dict)
 
         if spin:
             # I had to guess what the ordering of the spin is, because
@@ -384,14 +403,186 @@ class ProjwfcParser(Parser):
             # spin up states are written first, then spin down
             #
             out_info_dict['spin_down'] = False
-            bands_data1, projection_data1 = spin_dependent_subparser(out_info_dict)
-            append_nodes_list += [('projections_up', projection_data1), ('bands_up', bands_data1)]
+            bands_data1, projection_data1 = spin_dependent_subparser(
+                out_info_dict)
+            append_nodes_list += [('projections_up',
+                                   projection_data1), ('bands_up', bands_data1)]
             out_info_dict['spin_down'] = True
-            bands_data2, projection_data2 = spin_dependent_subparser(out_info_dict)
-            append_nodes_list += [('projections_down', projection_data2), ('bands_down', bands_data2)]
+            bands_data2, projection_data2 = spin_dependent_subparser(
+                out_info_dict)
+            append_nodes_list += [('projections_down',
+                                   projection_data2), ('bands_down', bands_data2)]
         else:
             out_info_dict['spin_down'] = False
-            bands_data, projection_data = spin_dependent_subparser(out_info_dict)
-            append_nodes_list += [('projections', projection_data), ('bands', bands_data)]
+            bands_data, projection_data = spin_dependent_subparser(
+                out_info_dict)
+            append_nodes_list += [('projections',
+                                   projection_data), ('bands', bands_data)]
 
         return append_nodes_list
+
+
+CONVERSION_DICT = {
+    'S': {
+        'S': {
+            'angular_momentum': 0,
+            'magnetic_number': 0
+        }
+    },
+    'P': {
+        'PZ': {
+            'angular_momentum': 1,
+            'magnetic_number': 0
+        },
+        'PX': {
+            'angular_momentum': 1,
+            'magnetic_number': 1
+        },
+        'PY': {
+            'angular_momentum': 1,
+            'magnetic_number': 2
+        },
+    },
+    'D': {
+        'DZ2': {
+            'angular_momentum': 2,
+            'magnetic_number': 0
+        },
+        'DXZ': {
+            'angular_momentum': 2,
+            'magnetic_number': 1
+        },
+        'DYZ': {
+            'angular_momentum': 2,
+            'magnetic_number': 2
+        },
+        'DX2-Y2': {
+            'angular_momentum': 2,
+            'magnetic_number': 3
+        },
+        'DXY': {
+            'angular_momentum': 2,
+            'magnetic_number': 4
+        },
+    },
+    'F': {
+        'FZ3': {
+            'angular_momentum': 3,
+            'magnetic_number': 0
+        },
+        'FZX2': {
+            'angular_momentum': 3,
+            'magnetic_number': 1
+        },
+        'FYZ2': {
+            'angular_momentum': 3,
+            'magnetic_number': 2
+        },
+        'FZ(X2-Y2)': {
+            'angular_momentum': 3,
+            'magnetic_number': 3
+        },
+        'FXYZ': {
+            'angular_momentum': 3,
+            'magnetic_number': 4
+        },
+        'FX(X2-3Y2)': {
+            'angular_momentum': 3,
+            'magnetic_number': 5
+        },
+        'FY(3X2-Y2)': {
+            'angular_momentum': 3,
+            'magnetic_number': 6
+        },
+    },
+    'SP': {
+        'SP-1': {
+            'angular_momentum': -1,
+            'magnetic_number': 0
+        },
+        'SP-2': {
+            'angular_momentum': -1,
+            'magnetic_number': 1
+        },
+    },
+    'SP2': {
+        'SP2-1': {
+            'angular_momentum': -2,
+            'magnetic_number': 0
+        },
+        'SP2-2': {
+            'angular_momentum': -2,
+            'magnetic_number': 1
+        },
+        'SP2-3': {
+            'angular_momentum': -2,
+            'magnetic_number': 2
+        },
+    },
+    'SP3': {
+        'SP3-1': {
+            'angular_momentum': -3,
+            'magnetic_number': 0
+        },
+        'SP3-2': {
+            'angular_momentum': -3,
+            'magnetic_number': 1
+        },
+        'SP3-3': {
+            'angular_momentum': -3,
+            'magnetic_number': 2
+        },
+        'SP3-4': {
+            'angular_momentum': -3,
+            'magnetic_number': 3
+        },
+    },
+    'SP3D': {
+        'SP3D-1': {
+            'angular_momentum': -4,
+            'magnetic_number': 0
+        },
+        'SP3D-2': {
+            'angular_momentum': -4,
+            'magnetic_number': 1
+        },
+        'SP3D-3': {
+            'angular_momentum': -4,
+            'magnetic_number': 2
+        },
+        'SP3D-4': {
+            'angular_momentum': -4,
+            'magnetic_number': 3
+        },
+        'SP3D-5': {
+            'angular_momentum': -4,
+            'magnetic_number': 4
+        },
+    },
+    'SP3D2': {
+        'SP3D2-1': {
+            'angular_momentum': -5,
+            'magnetic_number': 0
+        },
+        'SP3D2-2': {
+            'angular_momentum': -5,
+            'magnetic_number': 1
+        },
+        'SP3D2-3': {
+            'angular_momentum': -5,
+            'magnetic_number': 2
+        },
+        'SP3D2-4': {
+            'angular_momentum': -5,
+            'magnetic_number': 3
+        },
+        'SP3D2-5': {
+            'angular_momentum': -5,
+            'magnetic_number': 4
+        },
+        'SP3D2-6': {
+            'angular_momentum': -5,
+            'magnetic_number': 5
+        },
+    }
+}

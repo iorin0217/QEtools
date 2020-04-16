@@ -1,5 +1,6 @@
 
 # %%
+import xml.etree.ElementTree as ET
 import numpy as np
 import plotly.offline as pltly
 import plotly.graph_objs as go
@@ -49,41 +50,42 @@ pltly.iplot(bandfig)
 # include_mathjax='cdn')
 
 # %%
-with open("/home/CMD35/cmd35stud07/experiments/SRO/pwscf.save/", "r") as f:
-    tmp = f.readlines()
-    atm_3_wfc_5 = np.array(
-        [np.array(list(map(float, i.rstrip().split()))) for i in tmp[1:]])
-atm_3_wfc_5[0]
+# pdos.out / fat.out : orbital
+# band.out.gnu : [linear k , E] * nband
+# atomic_proj.xml : [k, orb, a+bj * band]
+RytoeV = 13.605698066
+projxml = ET.parse(
+    "/home/CMD35/cmd35stud07/experiments/SRO/pwscf.save/atomic_proj.xml").getroot()
+nkpoints = int(projxml.findall(
+    "HEADER/NUMBER_OF_K-POINTS")[0].text.strip())
+# Read the number of BANDS
+nbands = int(projxml.find("HEADER/NUMBER_OF_BANDS").text)
+# get number of projections
+nproj = int(projxml.find("HEADER/NUMBER_OF_ATOMIC_WFC").text)
+# get weights of kpoints projections
+weights = list(
+    map(float, projxml.find("WEIGHT_OF_K-POINTS").text.split()))
+# get kpoints
+kpoints_lines = projxml.find("K-POINTS").text.strip().split('\n')
+kpoints_float = [list(map(float, kline.split())) for kline in kpoints_lines]
+kpoints = np.array(kpoints_float)
 # %%
-
-
-def bandos_plot():
-    # use subplot
-    band_set
-    dos_set
-
-
-def band_set(band_gnu_file, fermi_energy):
-    '''eV単位にしてFermi energyを0点にとる
-    '''
-    band_data = np.loadtxt(band_gnu_file)
-    k_list = np.unique(band_data.T[0])  # k axis
-    num_band = int(len(band_data)/len(k_list))
-    # energies at k axis
-    bands = np.array(np.split(band_data.T[1], num_band)) - float(fermi_energy)
-    return k_list, bands
-
-
-def get_k_points(band_gp_file):
-    k_points = {}  # k point name and corrd
-    with open(band_gp_file, "r") as f:
-        band_gp = f.readlines()
-    k_points_corrd = [float(s[:-1].split("=")[1])
-                      for s in band_gp if re.match("x\d+ = ", s)]
-    k_points_name = [s.split(" ")[0][1:-1]
-                     for s in band_gp if re.match("\S+\sx\d+", s)]
-    k_points = {corrd: K for (corrd, K) in zip(k_points_corrd, k_points_name)}
-    return k_points
+proj = np.zeros([nkpoints, nproj, nbands], dtype=complex)
+for ik in range(nkpoints):
+    for ip in range(nproj):
+        projlist = projxml.find("PROJECTIONS/K-POINT.%d/ATMWFC.%d" %
+                                (ik+1, ip+1)).text.splitlines()[1:-1]
+        proj[ik, ip] = [(lambda x, y: complex(float(x), float(y)))(
+            *c.split(',')) for c in projlist]
+np.array(proj)
+# %%
+eigen = []
+for ik in range(nkpoints):
+    eigen.append(list(map(float, projxml.find(
+        "EIGENVALUES/K-POINT.%d/EIG" % (ik+1)).text.split())))
+np.array(eigen)*RytoeV
+# %%
+kpoints = []
 
 
 def band_plot(emin, emax, band_gnu_file, fermi_energy, band_gp_file):
@@ -155,57 +157,3 @@ def band_plot(emin, emax, band_gnu_file, fermi_energy, band_gp_file):
     )
     bandfig = go.Figure(data=band_traces + vlines, layout=bandlayout)
     pltly.plot(bandfig, filename="Bands_SrP8", include_mathjax='cdn')
-
-
-def dos_plot(dos, efermi, orbcomb=None):
-    '''
-    dos: instance of Dos
-        {otn}
-    orbcomb: orbital combination
-        None -> only tdos
-        [[(atom1,orb1)],[(atom2,orb1),(atom2,orb2)]] -> pdos & tdos
-        pdos: sum of inner list (atom,orb)
-    '''
-    def sum_pdos(orbcomb):
-        retrun
-    tdos = sum_pdos()
-    for orb in orbcomb:
-
-    dosdata = go.Data([trace_tdos, trace_3s, trace_3p])
-
-    return dosdata
-
-
-def dos_set(tdos):
-    dosxaxis = go.XAxis(
-        title="Density of states",
-        showgrid=True,
-        showline=True,
-        range=[.01, 3],
-        mirror="ticks",
-        ticks="inside",
-        linewidth=2,
-        tickwidth=2
-    )
-    dosyaxis = go.YAxis(
-        title="$E - E_f \quad / \quad \\text{eV}$",
-        showgrid=True,
-        showline=True,
-        ticks="inside",
-        mirror='ticks',
-        linewidth=2,
-        tickwidth=2,
-        zerolinewidth=2
-    )
-    dos_layout = go.Layout(
-        title="Density of states of Silicon",
-        xaxis=dosxaxis,
-        yaxis=dosyaxis
-    )
-    return dos_layout
-
-
-'''
-    ofl.plot(fig, filename='p-DOS.html',
-             auto_open=False, include_mathjax='cdn')
-'''
