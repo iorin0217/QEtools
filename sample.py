@@ -313,8 +313,8 @@ for cif in Path("/home/CMD35/cmd35stud07/experiments/").glob("Sr2*/*.cif"):
     create_pw_in(path, env, variables, calculation="bands")
     create_band_in(path)
 # %%
-cif = "/home/CMD35/cmd35stud07/experiments/Sr2RhO4/Sr2RhO4_mp-757102_conventional_standard.cif"
-path = "/home/CMD35/cmd35stud07/experiments/Sr2RhO4/"
+cif = "/home/CMD35/cmd35stud07/experiments/SRO_conv/Sr2RuO4_mp-4596_primitive.cif"
+#path = "/home/CMD35/cmd35stud07/experiments/SRO/"
 env = create_env(cif, variables)
 # %%
 env["lda_plus_u"] = False
