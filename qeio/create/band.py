@@ -1,27 +1,43 @@
 # https://www.quantum-espresso.org/Doc/INPUT_BANDS.html
-def create_band_in(path, nspin=1, plot_2d=".false."):
-    band_temp = ["&BANDS", f"plot_2d={plot_2d}"]
-    if nspin == 1:
-        band_temp += ["filband = 'band.out'", "/"]
-        print(*band_temp, sep="\n", end="\n",
-              file=open(f"{path}/band.in", "w"))
-    elif nspin == 2:
-        band_temp_dn = band_temp[:]
-        band_temp += ["filband = 'band_up.out'", "spin_component = 1", "/"]
-        band_temp_dn += ["filband = 'band_dn.out'", "spin_component = 2", "/"]
-        print(*band_temp, sep="\n", end="\n",
-              file=open(f"{path}/band_up.in", "w"))
-        print(*band_temp_dn, sep="\n", end="\n",
-              file=open(f"{path}/band_dn.in", "w"))
-    elif nspin == 4:
-        band_temp_y = band_temp[:]
-        band_temp_z = band_temp[:]
-        band_temp += ["filband = 'band_s.out'", "lsigma(1) = .true.", "/"]
-        band_temp_y += ["filband = 'band_s.out'", "lsigma(2) = .true.", "/"]
-        band_temp_z += ["filband = 'band_s.out'", "lsigma(3) = .true.", "/"]
-        print(*band_temp, sep="\n", end="\n",
-              file=open(f"{path}/band_sx.in", "w"))
-        print(*band_temp_y, sep="\n", end="\n",
-              file=open(f"{path}/band_sy.in", "w"))
-        print(*band_temp_z, sep="\n", end="\n",
-              file=open(f"{path}/band_sz.in", "w"))
+
+
+class Band:
+    def __init__(self, outpath, env):
+        '''
+        main usage
+            band = Band(outpath, env)
+                band*.in is created
+                sub band.command
+        input
+            outpath : path
+            env : Env
+        '''
+        if env.nspin == 1:
+            self.fnames = ["band"]
+        elif env.nspin == 2:
+            self.fnames = ["band_up", "band_dn"]
+        elif env.nspin == 4:
+            self.fnames = ["band", "band_sx", "band_sy", "band_sz"]
+        # create input file
+        self._save_in(outpath)
+        # run command
+        self.command = [
+            f"bands.x -in {fname}.in | tee {fname}.out" for fname in self.fnames]
+
+    def _save_in(self, outpath):
+        band_temp = ["&BANDS"]
+        band_in = band_temp + ["filband = 'band.out'", "/"]
+        band_up_in = band_temp + \
+            ["filband = 'band_up.out'", "spin_component = 1", "/"]
+        band_dn_in = band_temp + \
+            ["filband = 'band_dn.out'", "spin_component = 2", "/"]
+        band_sx_in = band_temp + \
+            ["filband = 'band_sx.out'", "lsigma(1) = .true.", "/"]
+        band_sy_in = band_temp + \
+            ["filband = 'band_sy.out'", "lsigma(1) = .true.", "/"]
+        band_sz_in = band_temp + \
+            ["filband = 'band_sz.out'", "lsigma(1) = .true.", "/"]
+        nline = repr('\n')
+        for fname in self.fnames:
+            eval(
+                f"print(*{fname}_in, sep={nline}, end={nline}, file=open('{outpath}/{fname}.in','w'))")

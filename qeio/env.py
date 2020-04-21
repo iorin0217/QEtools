@@ -1,4 +1,3 @@
-# %%
 import numpy as np
 from pymatgen.io.cif import CifParser
 from pymatgen import Structure
@@ -8,9 +7,9 @@ from pymatgen.core.periodic_table import get_el_sp
 import spglib
 import seekpath
 import json
-import os
 import re
 import itertools
+from pathlib import Path
 
 
 class Env:
@@ -43,7 +42,7 @@ class Env:
         # setting
         if not self.init_atoms:
             self.init_atoms = [str(u) for u in self.init_crystal.species]
-        with open("../settings/elements.json", "r") as f:
+        with open(Path.joinpath(Path(__file__).parent.resolve(), "../settings/elements.json"), "r") as f:
             elements_json = json.load(f)
         # pseudopotential & SOC / Hubbard U
         lspinorb = False
@@ -254,19 +253,3 @@ class Env:
     def from_xml(cls, xmlfile):
         # TODO : implement
         pass
-
-
-# %%
-cif = "/home/CMD35/cmd35stud07/experiments/Sr2RhO4/Sr2RhO4_mp-757102_conventional_standard.cif"
-env = Env.from_cif(cif)
-
-# %%
-env.lda_plus_u = False
-scf = PW("/home/CMD35/cmd35stud07/experiments/BHO", env, calculation="scf")
-nscf = PW("/home/CMD35/cmd35stud07/experiments/BHO",
-          env, calculation="nscf")
-bands = PW("/home/CMD35/cmd35stud07/experiments/BHO",
-           env, calculation="bands")
-
-
-# %%
