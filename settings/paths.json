@@ -1,7 +1,8 @@
 {
-    "schedular": "",
-    "QEtools": "/home/CMD35/cmd35stud07/QEtools",
+    "QExPy": "/home/CMD35/cmd35stud07/QExPy",
     "QE": "/home/CMD35/cmd35stud07/QE6.4.1/bin",
+    "mpi": "mpirun",
+    "queue": "qsub",
     "$schema": "",
     "VESTA": "",
     "FermiSurfer": "",
