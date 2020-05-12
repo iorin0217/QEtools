@@ -13,7 +13,7 @@ class PW:
         input
             outpath : path
             env : Env
-            variables : dict from variables.jsom 
+            variables : dict from variables.json
             calculation = scf/nscf/bands/vc-relax
         '''
         # &CONTROL basic
@@ -23,6 +23,7 @@ class PW:
         # &SYSTEM basic
         self.ecutwfc = env.ecutwfc
         self.ecutrho = env.ecutrho
+        self.degauss = variables['degauss'] if variables else 0.01
         # TODO : ibrav neq 0
         # TODO : nbnd
         # self.nbnd = sum(list([env.elements[atom]["valence"][1] * 2 + 1 for atom in env.atoms]))
@@ -89,7 +90,7 @@ class PW:
                        f"{int(self.nk[0])} {int(self.nk[1])} {int(self.nk[2])} 0 0 0"]
             scf_in = control + ["/"] + SSSH + [f"occupations = '{self.occupations}'", "/"] + \
                 electrons + ["/"] + CAA + kpoints
-        elif self.calculation == "vcrelax":
+        elif self.calculation == "vc-relax":
             conv_thr = [
                 f"etot_conv_thr = {self.etot_conv_thr}", f"forc_conv_thr = {self.forc_conv_thr}"]
             ions = ["&IONS", f"ion_dynamics = {self.ion_dynamics}"]
@@ -98,7 +99,7 @@ class PW:
             kpoints = ["K_POINTS automatic",
                        f"{int(self.nk[0])} {int(self.nk[1])} {int(self.nk[2])} 0 0 0"]
             vcrelax_in = control + conv_thr + \
-                ["/"] + SSSH + [f"occupations = '{self.occupations}'", "/"] + electrons + ["/"] + \
+                ["/"] + SSSH + [f"occupations = 'smearing'", f"degauss = {self.degauss}", "/"] + electrons + ["/"] + \
                 ions + ["/"] + cell + ["/"] + CAA + kpoints
         elif self.calculation == "nscf":
             # TODO : nbnd
