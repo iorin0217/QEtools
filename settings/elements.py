@@ -4,12 +4,10 @@ import json
 import tarfile
 import zipfile
 import shutil
-import glob
 import requests
 from bs4 import BeautifulSoup
 import time
 import re
-from pymatgen.core.periodic_table import get_el_sp
 from pymatgen import Element
 from pathlib import Path
 
@@ -90,39 +88,40 @@ def predownload():
     pslib_ver_dict = {}
     [pslib_ver_dict.update({i.split(":")[0]: "100" if (i.split(":")[1] in ["1.0.0", "1.0.1"]) else "031"})
      for i in pslib_list]
-    '''
-    # TODO : download CoInMn from QE home page
+    # https://www.materialscloud.org/discover/sssp/plot/precision/In
+    pslib_ver_dict["In"] = "031"
+    # download CoInMn from QE home page and swap 031
+    os.mkdir("./pslib_CoInMn")
     pslib_url = "https://www.quantum-espresso.org/pseudopotentials/ps-library/"
     for special in ["co", "in", "mn"]:
         html = requests.get(pslib_url + special.lower())
         soup = BeautifulSoup(html.text, "html.parser")
         candidates = [i.getText()
-                        for i in soup.select("#content-right td")]
-        ps_file_indexs = [j for j, k in enumerate(
-            candidates) if f"Pseudopotential type: {pstype} \nFunctional type: PBE\nNon Linear Core Correction\nFull relativistic\n" in k]
-        if len(ps_file_indexs) < 1:
-            print(
-                f"I can't find a fr potential of {special} in PS Library")
-            ps_file = ""
-            cutoff = 0
-            dual = 0
-            cite = ""
-            resource = ""
-        else:
-            if len(ps_file_indexs) > 1:
-                # select more semi core
-                ps_file_index = sorted([(len(candidates[j]), j)
-                                        for j in ps_file_indexs], reverse=True)[0][1]
-            else:
-                ps_file_index = ps_file_indexs[0]
-            href = "https://www.quantum-espresso.org" + \
-                soup.select(
-                    "#content-right td")[ps_file_index].find("a")["href"]
-            ps_text = requests.get(href).text
-            ps_file = soup.select(
+                      for i in soup.select("#content-right td")]
+        for func in ["PBE", "PBESOL"]:
+            for pstype in ["PAW", "USPP"]:
+                for soc in ["Scalar relativistic", "Full relativistic"]:
+                    ps_file_indexs = [j for j, k in enumerate(
+                        candidates) if f"Pseudopotential type: {pstype} \nFunctional type: {func}\nNon Linear Core Correction\n{soc}\n" in k]
+                    if len(ps_file_indexs) < 1:
+                        print(
+                            f"I can't find a {func}-{soc}-{pstype} potential of {special} in PS Library")
+                    else:
+                        if len(ps_file_indexs) > 1:
+                            # select older version
+                            ps_file_index = sorted(
+                                [(len(candidates[j]), j) for j in ps_file_indexs], reverse=True)[0][1]
+                        else:
+                            ps_file_index = ps_file_indexs[0]
+                    href = "https://www.quantum-espresso.org" + \
+                        soup.select(
+                            "#content-right td")[ps_file_index].find("a")["href"]
+                    ps_text = requests.get(href).text
+                    ps_file = soup.select(
                         "#content-right td")[ps_file_index].find("a").getText().strip()
-            print(ps_text, sep='\n', file=open(f"./pslib_CoInMn/{ps_file}", 'w'))
-    '''
+                    print(ps_text, sep='\n', file=open(
+                        f"./pslib_CoInMn/{ps_file}", 'w'))
+    shutil.copy("./pslib_CoInMn/*", "./pslib031/")
 
 
 def pslib_read(psfile):
@@ -211,128 +210,166 @@ if __name__ == "__main__":
         pslib_ver_dict = json.load(f)
     # choose pseudo potentials
     elements = {}
-    # TODO : Lanthanoides, Co, In, Mn
-    for element in without_Lanthanoides:
+    # for element in ["Ag"]:
+    for element in ssspp:
         SOC = "sr"
-        if (31 <= element.Z <= 34) | (39 <= element.Z <= 52) | (57 <= element.Z <= 84):
+        if (31 <= Element(element).Z <= 34) | (39 <= Element(element).Z <= 52) | (57 <= Element(element).Z <= 84):
             SOC = "fr"
         default = {"pstype": pstypes[ssspp[element]["pseudopotential"]],
                    "SOC": SOC, "Hubbard": Hubbards.get(element)}
         pseudopotential = {"PBE": {"sr": {}, "fr": {}},
                            "PBEsol": {"sr": {}, "fr": {}}}
-        # PAW
-        for func in ["PBE", "PBEsol"]:
-            if default["pstype"] == "PAW":
-                psfile = [s for s in os.listdir(
-                    f"./SSSP_{func}_pseudos") if re.split("[._-]", s)[0].lower() == f"{element}".lower()][0]
-                shutil.copy(f"./SSSP_{func}_pseudos/{psfile}", "./pseudos/")
-                wfc, ecutwfc = pslib_read(f"./pseudos/{psfile}")
-                ecutwfc = ssspp[element]["cutoff"]
-                cite = ssspp[element]["pseudopotential"]
-                resource = "SSSP"
-            else:
+        # Lanthanoid
+        if 57 <= Element(element).Z <= 71:
+            for func in ["PBE", "PBESOL"]:
+                for pawus in [("PAW", "kjpaw"), ("US", "rrkjus")]:
+                    for rel in [("sr", ""), ("fr", "fr")]:
+                        candidates = [p.name for p in Path(
+                            "./pslib" + pslib_ver_dict[element]).glob(f"{element}.{rel[1]}-{func.lower()}-*-{pawus[1]}_*")]
+                        # take longer name which consider more semi-core states
+                        psfile = max(candidates, key=len)
+                        shutil.copy(
+                            f"./pslib100/{psfile}", "./pseudos/")
+                        wfc, ecutwfc = pslib_read(f"./pseudos/{psfile}")
+                        pseudopotential[func][[rel[0]]][pawus[0]] = {
+                            "filename": psfile, "cutoff": ecutwfc, "dual": 8.0, "wfc": wfc, "cite": f"100{pawus[0]}", "resource": "PSLibrary100"}
+        else:
+            # PAW
+            for func in ["PBE", "PBEsol"]:
+                # sr
+                if default["pstype"] == "PAW":
+                    psfile = [s for s in os.listdir(
+                        f"./SSSP_{func}_pseudos") if re.split("[._-]", s)[0].lower() == f"{element}".lower()][0]
+                    shutil.copy(
+                        f"./SSSP_{func}_pseudos/{psfile}", "./pseudos/")
+                    wfc, ecutwfc = pslib_read(f"./pseudos/{psfile}")
+                    ecutwfc = ssspp[element]["cutoff"]
+                    cite = ssspp[element]["pseudopotential"]
+                    resource = "SSSP"
+                else:
+                    candidates = [p.name for p in Path(
+                        "./pslib" + pslib_ver_dict[element]).glob(f"{element}.{func.lower()}-*-kjpwaw_*")]
+                    # take longer name which consider more semi-core states
+                    psfile = max(candidates, key=len)
+                    shutil.copy(
+                        f"./pslib{pslib_ver_dict[element]}/{psfile}", "./pseudos/")
+                    wfc, ecutwfc = pslib_read(f"./pseudos/{psfile}")
+                    cite = pslib_ver_dict[element] + "PAW"
+                    resource = "PSLibrary" + \
+                        pslib_ver_dict[element] if (
+                            element not in ["Co", "In", "Mn"]) else "Readey-to-use"
+                dual = 8.0 if not (element in ["Mn", "Fe", "Co"]) else 12.0
+                pseudopotential[func]["sr"]["PAW"] = {
+                    "filename": psfile, "cutoff": ecutwfc, "dual": dual, "wfc": wfc, "cite": cite, "resource": resource}
+                # fr
+                psfile_fr = psfile.replace(
+                    f"{element}.pbe", f"{element}.rel-pbe")
+                shutil.copy(
+                    list(Path("./").glob(f"pslib[0-9][0-9][0-9]/{psfile_fr}"))[0], "./pseudos/")
+                pseudopotential[func]["fr"]["PAW"] = {
+                    "filename": psfile_fr, "cutoff": ecutwfc, "dual": dual, "wfc": wfc, "cite": cite, "resource": resource}
+            # US
+            for func in ["PBE", "PBEsol"]:
+                # sr
+                if default["pstype"] == "US":
+                    psfile = [s for s in os.listdir(
+                        f"./SSSP_{func}_pseudos") if re.split("[._-]", s)[0].lower() == f"{element}".lower()][0]
+                    shutil.copy(
+                        f"./SSSP_{func}_pseudos/{psfile}", "./pseudos/")
+                    ecutwfc = ssspp[element]["cutoff"]
+                    cite = ssspp[element]["pseudopotential"]
+                    resource = "SSSP"
+                else:
+                    candidates = [p.name for p in Path(
+                        f"all_{func.lower()}_UPF_v1.5").glob(f"{element.lower()}_*")]
+                    psfile = candidates[0]  # only one
+                    shutil.copy(
+                        f"all_{func.lower()}_UPF_v1.5/{psfile}", "./pseudos/")
+                    ecutwfc = ssspp[element]["cutoff"] if default["pstype"] == "PAW" else max(
+                        ssspp[element]["cutoff"] / 2, 40)
+                    cite = "GBRV-1.5"
+                    resource = "GBRV1.5"
+                wfc = gbrv_read(f"./pseudos/{psfile}")
+                dual = 8.0 if not (element in ["Mn", "Fe", "Co"]) else 12.0
+                pseudopotential[func]["sr"]["US"] = {
+                    "filename": psfile, "cutoff": ecutwfc, "dual": dual, "wfc": wfc, "cite": cite, "resource": resource}
+                # fr
                 candidates = [p.name for p in Path(
-                    "./pslib" + pslib_ver_dict[element]).glob(f"{element}.{func.lower()}-*-kjpwaw_*")]
+                    "./pslib" + pslib_ver_dict[element]).glob(f"{element}.{func.lower()}-*-rrkjus_*")]
                 # take longer name which consider more semi-core states
                 psfile = max(candidates, key=len)
                 shutil.copy(f"./pslib{pslib_ver_dict}/{psfile}", "./pseudos/")
                 wfc, ecutwfc = pslib_read(f"./pseudos/{psfile}")
-                cite = pslib_ver_dict[element] + "PAW"
-                resource = "PSLibrary" + pslib_ver_dict[element]
-            dual = 8.0 if not (element in ["Mn", "Fe", "Co"]) else 12.0
-            pseudopotential[func]["sr"]["PAW"] = {
-                "filename": f"{psfile}", "cutoff": f"{ecutwfc}", "dual": f"{dual}", "cite": f"{cite}", "resource": f"{resource}"}
-            pseudopotential[func]["fr"]["PAW"] = fr_from_sr(
-                pseudopotential[func]["sr"]["PAW"])
-        # US
-        for func in ["PBE", "PBEsol"]:
-            # sr
-            if default["pstype"] == "US":
+                cite = pslib_ver_dict[element] + "US"
+                resource = "PSLibrary" + \
+                    pslib_ver_dict[element] if (
+                        element not in ["Co", "In", "Mn"]) else "Readey-to-use"
+                pseudopotential[func]["fr"]["US"] = {
+                    "filename": psfile, "cutoff": ecutwfc, "dual": dual, "wfc": wfc, "cite": cite, "resource": resource}
+            # ONCV
+            # sr PBE
+            dual = 4.0
+            if default["pstype"] == "ONCV":
+                cite = ssspp[element]["pseudopotential"]
+                if cite == "Dojo":
+                    psfile = f"{element}_ONCV_PBE-0.4.dojo.upf"  # rename
+                    shutil.copy(f"./SSSP_PBE_pseudos/{ssspp[element]["filename"]}", f"./pseudos/{psfile}")
+                else:
+                    psfile = ssspp[element]["filename"]
+                    shutil.copy(f"./SSSP_PBE_pseudos/{psfile}", "./pseudos/")
+                wfc = oncv_read(f"./pseudos/{psfile}", element)
+                ecutwfc = ssspp[element]["cutoff"]
+                resource = "SSSP"
+            else:
+                psfile = f"{element}_ONCV_PBE-1.0.oncvpsp.upf"  # rename
+                shutil.copy(f"./sg15/{element}_ONCV_PBE_sr",
+                            f"./pseudos/{psfile}")
+                wfc = oncv_read(f"./pseudos/{psfile}", element)
+                ecutwfc = dojo["pseudos_metadata"][element]["hints"]["high"]["ecut"]
+                cite = "SG15"
+                resource = "ONCVPSP"
+            pseudopotential["PBE"]["sr"]["ONCV"] = {
+                "filename": psfile, "cutoff": ecutwfc, "dual": dual, "wfc": wfc, "cite": cite, "resource": resource}
+            # fr PBE
+            if cite == "Dojo":
+                psfile_fr = f"{element}_ONCV_PBE_fr-0.4.dojo.upf"
+                shutil.copy(f"./nc-fr-04_pbe_stringent_upf/{element}.upf",
+                            f"./pseudos/{psfile_fr}")
+            else:
+                psfile_fr = f"{element}_ONCV_PBE_fr-1.0.oncvpsp.upf"
+                shutil.copy(f"./sg15/{element}_ONCV_PBE_fr",
+                            f"./pseudos/{psfile_fr}")
+            pseudopotential["PBE"]["fr"]["ONCV"] = {
+                "filename": psfile_fr, "cutoff": ecutwfc, "dual": dual, "wfc": wfc, "cite": cite, "resource": resource}
+            # sr PBEsol
+            if default["pstype"] == "ONCV":
                 psfile = [s for s in os.listdir(
-                    f"./SSSP_{func}_pseudos") if re.split("[._-]", s)[0].lower() == f"{element}".lower()][0]
-                shutil.copy(f"./SSSP_{func}_pseudos/{psfile}", "./pseudos/")
+                    f"./SSSP_PBEsol_pseudos") if re.split("[._-]", s)[0].lower() == f"{element}".lower()][0]
+                shutil.copy(f"./SSSP_PBEsol_pseudos/{psfile}", "./pseudos/")
+                wfc = oncv_read(psfile, element)
                 ecutwfc = ssspp[element]["cutoff"]
                 cite = ssspp[element]["pseudopotential"]
                 resource = "SSSP"
             else:
-                candidates = [p.name for p in Path(
-                    f"all_{func.lower()}_UPF_v1.5").glob(f"{element.lower()}_*")]
-                psfile = candidates[0]  # only one
+                psfile = f"{element}_ONCV_PBEsol-0.4.dojo.upf"  # rename
                 shutil.copy(
-                    f"all_{func.lower()}_UPF_v1.5/{psfile}", "./pseudos/")
-                ecutwfc = ssspp[element]["cutoff"] if default["pstype"] == "PAW" else max(
-                    ssspp[element]["cutoff"] / 2, 40)
-                cite = "GBRV-1.5"
-                resource = "GBRV1.5"
-            wfc = gbrv_read(f"./pseudos/{psfile}")
-            dual = 8.0 if not (element in ["Mn", "Fe", "Co"]) else 12.0
-            pseudopotential[func]["sr"]["US"] = {
-                "filename": f"{psfile}", "cutoff": f"{ecutwfc}", "dual": f"{dual}", "cite": f"{cite}", "resource": f"{resource}"}
-            # fr
-            candidates = [p.name for p in Path(
-                "./pslib" + pslib_ver_dict[element]).glob(f"{element}.{func.lower()}-*-rrkjus_*")]
-            # take longer name which consider more semi-core states
-            psfile = max(candidates, key=len)
-            shutil.copy(f"./pslib{pslib_ver_dict}/{psfile}", "./pseudos/")
-            wfc, ecutwfc = pslib_read(f"./pseudos/{psfile}")
-            cite = pslib_ver_dict[element] + "US"
-            resource = "PSLibrary" + pslib_ver_dict[element]
-            pseudopotential[func]["fr"]["US"] = {
-                "filename": f"{psfile}", "cutoff": f"{ecutwfc}", "dual": f"{dual}", "cite": f"{cite}", "resource": f"{resource}"}
-        # ONCV
-        # sr PBE
-        dual = 4.0
-        if default["pstype"] == "ONCV":
-            psfile = ssspp[element]["filename"]
-            shutil.copy(f"./SSSP_PBE_pseudos/{psfile}", "./pseudos/")
-            wfc = oncv_read(f"./pseudos/{psfile}", element)
-            ecutwfc = ssspp[element]["cutoff"]
-            cite = ssspp[element]["pseudopotential"]
-            resource = "SSSP"
-        else:
-            candidates = [p.name for p in Path(
-                "./sg15").glob(f"{element}_*_sr.upf")]
-            psfile = candidates[0]
-            shutil.copy(f"./sg15/{psfile}", "./pseudos/")
-            wfc = oncv_read(f"./pseudos/{psfile}", element)
-            ecutwfc = dojo["pseudos_metadata"][element]["hints"]["high"]["ecut"]
-            cite = "SG15"
-            resource = "ONCVPSP"
-        pseudopotential["PBE"]["sr"]["ONCV"] = {
-            "filename": f"{psfile}", "cutoff": f"{ecutwfc}", "dual": f"{dual}", "cite": f"{cite}", "resource": f"{resource}"}
-        # fr PBE
-        pseudopotential["PBE"]["fr"]["ONCV"] = fr_from_sr(
-            pseudopotential["PBE"]["sr"]["ONCV"])
-        # sr PBEsol
-        if default["pstype"] == "ONCV":
-            psfile = [s for s in os.listdir(
-                f"./SSSP_PBEsol_pseudos") if re.split("[._-]", s)[0].lower() == f"{element}".lower()][0]
-            shutil.copy(f"./SSSP_PBEsol_pseudos/{psfile}", "./pseudos/")
-            wfc = oncv_read(psfile, element)
-            ecutwfc = ssspp[element]["cutoff"]
-            cite = ssspp[element]["pseudopotential"]
-            resource = "SSSP"
-        else:
-            # change name for conflict resolution
-            psfile = f"{element}_ONCV_PBEsol-0.4.dojo.upf"
+                    f"./nc-sr-04_pbesol_stringent_upf/{element}.upf", f"./pseudos/{psfile}")
+                wfc = oncv_read(f"./pseudos/{psfile}", element)
+                ecutwfc = dojo["pseudos_metadata"][element]["hints"]["high"]["ecut"]
+                cite = "Dojo"
+                resource = "PseudoDojo0.4"
+            pseudopotential["PBEsol"]["sr"]["ONCV"] = {
+                "filename": psfile, "cutoff": ecutwfc, "dual": dual, "wfc": wfc, "cite": cite, "resource": resource}
+            # fr PBEsol
+            psfile = f"{element}_ONCV_PBEsol_fr-0.4.dojo.upf"
             shutil.copy(
-                f"./nc-sr-04_pbesol_stringent_upf/{element}.upf", f"./pseudos/{psfile}")
+                f"./nc-fr-04_pbesol_stringent_upf/{element}.upf", f"./pseudos/{psfile}")
             wfc = oncv_read(f"./pseudos/{psfile}", element)
             ecutwfc = dojo["pseudos_metadata"][element]["hints"]["high"]["ecut"]
             cite = "Dojo"
             resource = "PseudoDojo0.4"
-        pseudopotential["PBEsol"]["sr"]["ONCV"] = {
-            "filename": f"{psfile}", "cutoff": f"{ecutwfc}", "dual": f"{dual}", "cite": f"{cite}", "resource": f"{resource}"}
-        # fr PBEsol
-        psfile = f"{element}_ONCV_PBEsol_fr-0.4.dojo.upf"
-        shutil.copy(
-            f"./nc-fr-04_pbesol_stringent_upf/{element}.upf", f"./pseudos/{psfile}")
-        wfc = oncv_read(f"./pseudos/{psfile}", element)
-        ecutwfc = dojo["pseudos_metadata"][element]["hints"]["high"]["ecut"]
-        cite = "Dojo"
-        resource = "PseudoDojo0.4"
-        pseudopotential["PBEsol"]["fr"]["ONCV"] = {
-            "filename": f"{psfile}", "cutoff": f"{ecutwfc}", "dual": f"{dual}", "cite": f"{cite}", "resource": f"{resource}"}
+            pseudopotential["PBEsol"]["fr"]["ONCV"] = {
+                "filename": psfile, "cutoff": ecutwfc, "dual": dual, "wfc": wfc, "cite": cite, "resource": resource}
         # save to elements
         elements.update(
             {element: {"pseudopotential": pseudopotential, "default": default}})
@@ -352,4 +389,6 @@ if __name__ == "__main__":
     shutil.rmtree("pslib100")
     shutil.rmtree("pslib_CoInMn")
     shutil.rmtree("sg15")
+    shutil.move(*.tar.gz)
+    shutil(json)
     '''
