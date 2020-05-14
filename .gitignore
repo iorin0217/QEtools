@@ -103,5 +103,11 @@ venv.bak/
 # mypy
 .mypy_cache/
 
-# binary
-SSSP_efficiency_pseudos
+# mac
+.DS_Store
+# tar,zip
+.tar.gz
+.tgz
+.zip
+# bins
+pseudos
