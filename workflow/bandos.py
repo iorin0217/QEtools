@@ -34,3 +34,5 @@ band = Band(outpath, env)
 fatband = Projwfc(outpath, task="fatband")
 # TODO : job class / backup
 job = [scf, nscf, pdos, bands, band, fatband]
+
+# np nk

@@ -18,7 +18,8 @@ class Projwfc:
         # create input file
         self._save_in(outpath)
         # run command
-        self.command = [f"projwfc.x -in {self.task}.in | tee {self.task}.out"]
+        self.command = [
+            ["projwfc.x", f" -in {self.task}.in | tee {self.task}.out"]]
 
     def _save_in(self, outpath):
         projwfc_temp = ["&PROJWFC"]

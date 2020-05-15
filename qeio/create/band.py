@@ -21,8 +21,8 @@ class Band:
         # create input file
         self._save_in(outpath)
         # run command
-        self.command = [
-            f"bands.x -in {fname}.in | tee {fname}.out" for fname in self.fnames]
+        self.command = [["bands.x",
+                         f" -in {fname}.in | tee {fname}.out"] for fname in self.fnames]
 
     def _save_in(self, outpath):
         band_temp = ["&BANDS"]

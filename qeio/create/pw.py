@@ -1,5 +1,4 @@
 # https://www.quantum-espresso.org/Doc/INPUT_PW.html
-# %%
 import numpy as np
 
 
@@ -25,8 +24,8 @@ class PW:
         self.ecutrho = env.ecutrho
         self.degauss = variables['degauss'] if variables else 0.01
         # TODO : ibrav neq 0
-        # TODO : nbnd
-        # self.nbnd = sum(list([env.elements[atom]["valence"][1] * 2 + 1 for atom in env.atoms]))
+        self.nbnd = sum(
+            list([env.elements[atom]["valence"][1] * 2 + 1 for atom in env.atoms]))
         # &ELECTRONS basic
         self.conv_thr = len(
             env.atoms) * variables['threshold'] if variables else len(env.atoms) * 1.0e-12
@@ -44,8 +43,8 @@ class PW:
         # create input file
         self._save_in(outpath, env)
         # run command
-        self.command = [
-            f"pw.x -in {self.calculation}.in | tee {self.calculation}.out"]
+        self.command = [["pw.x",
+                         f" -in {self.calculation}.in | tee {self.calculation}.out"]]
 
     def _save_in(self, outpath, env):
         _atom_types, _nat = list(set(env.atoms)), len(
@@ -106,17 +105,14 @@ class PW:
             kpoints = ["K_POINTS automatic",
                        f"{int(self.nk[0])*2} {int(self.nk[1])*2} {int(self.nk[2])*2} 0 0 0"]
             nscf_in = control + ["/"] + SSSH + \
-                [f"occupations = '{self.occupations}'",
+                [f"nbnd = {self.nbnd}", f"occupations = '{self.occupations}'",
                     "/"] + electrons + ["/"] + CAA + kpoints
         elif self.calculation == "bands":
             # TODO : nbnd
             kpath = ["K_POINTS crystal"] + [f"{len(env.bandpath)}"] + [
                 f"{kcoord[0]} {kcoord[1]} {kcoord[2]} 1.0" for kcoord in env.bandpath]
             bands_in = control + ["/"] + SSSH + \
-                ["/"] + electrons + ["/"] + CAA + kpath
+                [f"nbnd = {self.nbnd}", "/"] + electrons + ["/"] + CAA + kpath
         nline = repr('\n')
         eval(
             f"print(*{self.calculation}_in, sep={nline}, end={nline}, file=open('{outpath}/{self.calculation}.in','w'))")
-
-
-# %%
