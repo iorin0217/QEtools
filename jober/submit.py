@@ -1,3 +1,21 @@
+'''
+#!/bin/bash -f
+#$ -pe smp 8
+#$ -cwd
+#$ -N job_name
+mpirun -np $NSLOTS /home/CMD35/cmd35stud07/QE6.4.1/bin/pw.x -in scf.in | tee scf.out
+mpirun -np $NSLOTS /home/CMD35/cmd35stud07/QE6.4.1/bin/pw.x -in nscf.in | tee nscf.out
+mpirun -np $NSLOTS /home/CMD35/cmd35stud07/QE6.4.1/bin/fermi_velocity.x -in nscf.in | tee fermi_velocity.out
+mpirun -np $NSLOTS /home/CMD35/cmd35stud07/QE6.4.1/bin/projwfc.x -in pdos.in | tee pdos.out
+mpirun -np $NSLOTS /home/CMD35/cmd35stud07/QE6.4.1/bin/pw.x -in bands.in | tee bands.out
+mpirun -np $NSLOTS /home/CMD35/cmd35stud07/QE6.4.1/bin/bands.x -in band.in
+mpirun -np $NSLOTS /home/CMD35/cmd35stud07/QE6.4.1/bin/projwfc.x -in fat.in | tee fat.out
+'''
+with open(Path.joinpath(Path(__file__).parent, "../settings/paths.json").resolve(), "r") as f:
+    paths = json.load(f)
+QE = paths["QE"]
+mpi = paths["mpi"]
+queue = paths["queue"]
 # qsub / docker
 from . import io
 from path import Path

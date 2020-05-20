@@ -36,14 +36,14 @@ class PH:
 
     def _save_in(self, outpath, env):
         # calculation type
-        base = ["&INPUTPH", "fildyn = 'pwscf.dyn'", "fildvscf = 'dv'", "fildrho = 'drho'",
+        base = ["&INPUTPH", "fildyn = 'ph.dyn'", "fildvscf = 'dv'", "fildrho = 'drho'",
                 "ldisp = .true.", f"nq1 = {self.nq[0]}", f"nq2 = {self.nq[1]}", f"nq3 = {self.nq[2]}"]
         if self.task == "ph":
             if self.occupations == "tetrahedra_opt":
                 ph_in = ["phonon"] + base + ["lshift_q = .true.", "/"]
             else:
                 ph_in = ["phonon"] + base
-        elif self.calculation == "elph":
+        elif self.task == "elph":
             if self.occupations == "tetrahedra_opt":
                 elph_in = ["electron-phonon"] + base + ["lshift_q = .true.", "electron_phonon = 'lambda_tetra",
                                                         f"nk1 = {self.nk[0] * 2}", f"nk2 = {self.nk[1] * 2}", f"nk3 = {self.nk[2] * 2}", "/"] + ["&INPUTa2F", f"nfreq = {self.nfreq}", "/"]
@@ -52,4 +52,4 @@ class PH:
                     ["electron_phonon = 'interpolated'", "/"]
         nline = repr('\n')
         eval(
-            f"print(*{self.task}_in, sep={nline}, end={nline}, file=open('{outpath}/{self.calculation}.in','w'))")
+            f"print(*{self.task}_in, sep={nline}, end={nline}, file=open('{outpath}/{self.task}.in','w'))")
