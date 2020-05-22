@@ -4,7 +4,7 @@ from pathlib import Path
 import json
 sys.path.append(
     str(Path.joinpath(Path(__file__).parent, "../../").resolve()))  # noqa
-from jobber import submit  # noqa
+from jobber import Submit  # noqa
 from qeio.env import Env  # noqa
 from qeio.create import PW  # noqa
 
@@ -23,11 +23,15 @@ for n in [0.8, 1, 1.2, 1.4]:
     os.makedirs(outpath_n)
     env.ecutwfc = ecutwfc * n
     env.ecutrho = ecutrho * n
-    submit([PW(outpath_n, env, variables, calculation="scf")])
+    submit = Submit(
+        [PW(outpath_n, env, variables, calculation="scf")], outpath_n)
+    submit()
 # TODO : select cutoff
 # k mesh
 for k in [4, 8, 12, 16]:
     outpath_k = outpath + f"/nk{k}"
     os.makedirs(outpath_k)
     variables["nk"] = [k, k, k]
-    submit([PW(outpath_k, env, variables, calculation="scf")])
+    submit = Submit(
+        [PW(outpath_k, env, variables, calculation="scf")], outpath_k)
+    submit()

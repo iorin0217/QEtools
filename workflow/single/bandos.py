@@ -3,7 +3,7 @@ from pathlib import Path
 import json
 sys.path.append(
     str(Path.joinpath(Path(__file__).parent, "../../").resolve()))  # noqa
-from jobber import submit  # noqa
+from jobber import Submit  # noqa
 from qeio.env import Env  # noqa
 from qeio.create import PW, Projwfc, Band  # noqa
 
@@ -23,4 +23,5 @@ band = Band(outpath, env)
 fatband = Projwfc(outpath, variables, task="fatband")
 # TODO : job class / backup
 job = [scf, nscf, pdos, bands, band, fatband]
-submit(job)
+submit = Submit(job, outpath)
+submit()

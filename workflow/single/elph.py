@@ -3,7 +3,7 @@ from pathlib import Path
 import json
 sys.path.append(
     str(Path.joinpath(Path(__file__).parent, "../../").resolve()))  # noqa
-from jobber import submit  # noqa
+from jobber import Submit  # noqa
 from qeio.env import Env  # noqa
 from qeio.create import PW, PH, Q2R, Matdyn  # noqa
 
@@ -29,4 +29,5 @@ else:
     matdyn = Matdyn(outpath, env, variables, task="alpha2f")
     # TODO : lambda
     job = [vc_relax, nscf, elph, q2r, matdyn]
-submit(job)
+submit = Submit(job, outpath)
+submit()

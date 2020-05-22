@@ -1,11 +1,13 @@
 {
-    "QExPy": "/home/CMD35/cmd35stud07/QExPy",
-    "QE": "/home/CMD35/cmd35stud07/QE6.4.1/bin",
+    "QExPy": "/QExPy",
+    "QE": "/QE6.4.1/bin",
+    "python": "python",
+    "server": "local",
     "mpi": "mpirun",
-    "queue": "qsub",
-    "$schema": "",
+    "np": 2,
+    "npool": 2,
     "VESTA": "",
     "FermiSurfer": "",
-    "RESPACK": "",
+    "Wannier90": "",
     "ALAMODE": ""
 }
