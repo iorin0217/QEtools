@@ -15,7 +15,7 @@ outpath = str((Path(input_file).parent).resolve())
 env = Env.from_cif(input_file, variables)
 # workflow
 vc_relax = PW(outpath, env, variables, calculation="vc-relax")
-# TODO : metal check, backup
+# TODO : structure, metal check, backup
 if variables["occupation"] == "tetrahedra_opt":
     ph = PH(outpath, env, variables, task="ph")
     elph = PH(outpath, env, variables, task="elph")

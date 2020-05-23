@@ -14,19 +14,21 @@ with open(Path.joinpath(Path(__file__).parent, "../../settings/variables.json").
 input_file = sys.argv[1]
 outpath = str((Path(input_file).parent).resolve())
 env = Env.from_cif(input_file, variables)
+job = []
 # workflow
 # cutoff
 ecutwfc = env.ecutwfc
 ecutrho = env.ecutrho
-for n in [0.8, 1, 1.2, 1.4]:
-    outpath_n = outpath + f"/ecut{n}"
-    os.makedirs(outpath_n)
+ecut_loop = {}
+for i, n in enumerate([0.8, 1, 1.2, 1.4]):
+    outpath_i = outpath + f"/ecut{i}"
+    os.makedirs(outpath_i)
     env.ecutwfc = ecutwfc * n
     env.ecutrho = ecutrho * n
-    submit = Submit(
-        [PW(outpath_n, env, variables, calculation="scf")], outpath_n)
-    submit()
+    ecut_loop.add(PW(outpath_i, env, variables, calculation="scf")]
 # TODO : select cutoff
+# env.ecutwfc =
+# env.ecutrho =
 # k mesh
 for k in [4, 8, 12, 16]:
     outpath_k = outpath + f"/nk{k}"
@@ -35,3 +37,4 @@ for k in [4, 8, 12, 16]:
     submit = Submit(
         [PW(outpath_k, env, variables, calculation="scf")], outpath_k)
     submit()
+job = [ecut_loop, k_loop]
