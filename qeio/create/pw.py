@@ -13,7 +13,7 @@ class PW:
             outpath : path
             env : Env
             variables : dict from variables.json
-            calculation = scf/nscf/bands/vc-relax
+            calculation = scf/nscf/bands/vcrelax
         '''
         # &CONTROL basic
         self.calculation = calculation
@@ -24,8 +24,12 @@ class PW:
         self.ecutrho = env.ecutrho
         self.degauss = variables['degauss'] if variables else 0.01
         # TODO : ibrav neq 0
+        '''
         self.nbnd = sum(
             list([env.elements[atom]["valence"][1] * 2 + 1 for atom in env.atoms]))
+        '''
+        self.nbnd = sum(list(
+            [sum(list([valence[1] * 2 + 1 for valence in env.elements[atom]["valence"]])) for atom in env.atoms]))
         # &ELECTRONS basic
         self.conv_thr = len(
             env.atoms) * variables['threshold'] if variables else len(env.atoms) * 1.0e-12
@@ -50,16 +54,16 @@ class PW:
         _atom_types, _nat = list(set(env.atoms)), len(
             env.atoms)  # useful for iteration
         # &CONTROL
+        _calc = "vc-relax" if self.calculation == "vcrelax" else self.calculation
         control = [
-            "&CONTROL", f"calculation = '{self.calculation}'", f"pseudo_dir = '{self.pseudo_dir}'"]
+            "&CONTROL", f"calculation = '{_calc}'", f"pseudo_dir = '{self.pseudo_dir}'"]
         # &SYSTEM
         _systems = ["&SYSTEM", "ibrav = 0", f"nat = {_nat}", f"ntyp = {len(_atom_types)}",
                     f"ecutwfc = {self.ecutwfc}", f"ecutrho = {self.ecutrho}"]
         _spin = []
         if env.nspin == 2:
-            _spin = ["nspin = 2"] + \
-                [f"starting_magnetization({i+1}) = {env.elements[atom]['starting_magnetization']}" for i,
-                 atom in enumerate(_atom_types) if np.abs(env.elements[atom]['starting_magnetization']) > 1e-3]  # QE has this resolution
+            _spin = ["nspin = 2"] + [f"starting_magnetization({i+1}) = {env.elements[atom]['starting_magnetization']}" for i,
+                                     atom in enumerate(_atom_types) if np.abs(env.elements[atom]['starting_magnetization']) > 1e-3]  # QE has this resolution
         elif env.nspin == 4:
             _spin = ["noncolin = .true."] + \
                 [f"starting_magnetization({i+1}) = {env.elements[atom]['starting_magnetization']}, angle1({i+1}) = {env.elements[atom]['angle1']}, angle2({i+1}) = {env.elements[atom]['angle2']}" for i,
@@ -72,6 +76,8 @@ class PW:
             _hubbard = ["lda_plus_u = .true."] + ["lda_plus_u_kind = 1"] + [f"Hubbard_U({i+1}) = {env.elements[atom]['Hubbard']['U']}" for i, atom in enumerate(
                 _atom_types) if env.elements[atom]['Hubbard'] and env.elements[atom]['Hubbard'].get('U')] + [f"Hubbard_J0({i+1}) = {env.elements[atom]['Hubbard']['J']}" for i, atom in enumerate(_atom_types) if env.elements[atom]['Hubbard'] and env.elements[atom]['Hubbard'].get('J')]
         SSSH = _systems + _spin + _soc + _hubbard
+        OCC = [f"occupations = '{self.occupations}'"] if self.occupations == "tetrahedra_opt" else [
+            f"occupations = 'smearing'", f"degauss = {self.degauss}"]
         # &ELECTRONS
         electrons = ["&ELECTRONS", f"conv_thr = {self.conv_thr}", f"mixing_beta = {self.mixing_beta}",
                      f"diagonalization = '{self.diagonalization}'", f"diago_full_acc = {self.diago_full_acc}"]
@@ -87,9 +93,9 @@ class PW:
         if self.calculation == "scf":
             kpoints = ["K_POINTS automatic",
                        f"{int(self.nk[0])} {int(self.nk[1])} {int(self.nk[2])} 0 0 0"]
-            scf_in = control + ["/"] + SSSH + [f"occupations = '{self.occupations}'", "/"] + \
+            scf_in = control + ["/"] + SSSH + OCC + ["/"] + \
                 electrons + ["/"] + CAA + kpoints
-        elif self.calculation == "vc-relax":
+        elif self.calculation == "vcrelax":
             conv_thr = [
                 f"etot_conv_thr = {self.etot_conv_thr}", f"forc_conv_thr = {self.forc_conv_thr}"]
             ions = ["&IONS", f"ion_dynamics = {self.ion_dynamics}"]
@@ -105,8 +111,8 @@ class PW:
             kpoints = ["K_POINTS automatic",
                        f"{int(self.nk[0])*2} {int(self.nk[1])*2} {int(self.nk[2])*2} 0 0 0"]
             nscf_in = control + ["/"] + SSSH + \
-                [f"nbnd = {self.nbnd}", f"occupations = '{self.occupations}'",
-                    "/"] + electrons + ["/"] + CAA + kpoints
+                [f"nbnd = {self.nbnd}"] + OCC + ["/"] + \
+                electrons + ["/"] + CAA + kpoints
         elif self.calculation == "bands":
             # TODO : nbnd
             kpath = ["K_POINTS crystal"] + [f"{len(env.bandpath)}"] + [

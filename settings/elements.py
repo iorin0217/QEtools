@@ -161,7 +161,7 @@ def pslib_read(psfile):
     # UPF ver2
     flag = True
     start = False
-    wfc = []
+    valence = []
     ecutwfc = None
     with open(psfile, "r") as f:
         while flag:
@@ -174,10 +174,11 @@ def pslib_read(psfile):
                 start = True
             if start:
                 if line.split()[0][0] in ["1", "2", "3", "4", "5", "6", "7"]:
-                    wfc.append([int(line.split()[0][0]), int(line.split()[2])])
+                    valence.append(
+                        [int(line.split()[0][0]), int(line.split()[2])])
                 elif "Generation configuration" in line:
                     flag = False
-    return wfc, ecutwfc
+    return valence, ecutwfc
 
 
 def gbrv_read(psfile):
@@ -185,7 +186,7 @@ def gbrv_read(psfile):
     flag = True
     start = False
     end = False
-    wfc = []
+    valence = []
     with open(psfile, "r") as f:
         while flag:
             line = f.readline()
@@ -196,10 +197,11 @@ def gbrv_read(psfile):
                     end = True
             if end:
                 if line.split()[0][0] in ["1", "2", "3", "4", "5", "6", "7"]:
-                    wfc.append([int(line.split()[0][0]), int(line.split()[1])])
+                    valence.append(
+                        [int(line.split()[0][0]), int(line.split()[1])])
                 elif "</PP_HEADER>" in line:
                     flag = False
-    return wfc
+    return valence
 
 
 def oncv_read(psfile, element):
@@ -223,8 +225,8 @@ def oncv_read(psfile, element):
                     tmp.append([int(line.split()[0]), int(line.split()[1])])
                 elif "PSEUDOPOTENTIAL AND OPTIMIZATION" in line:
                     flag = False
-    wfc = tmp[-1 * nv:]
-    return wfc
+    valence = tmp[-1 * nv:]
+    return valence
 
 
 if __name__ == "__main__":
@@ -264,9 +266,9 @@ if __name__ == "__main__":
                         psfile = max(candidates, key=len)
                         shutil.copy(
                             f"./pslib100/{psfile}", "./pseudos/")
-                        wfc, ecutwfc = pslib_read(f"./pseudos/{psfile}")
+                        valence, ecutwfc = pslib_read(f"./pseudos/{psfile}")
                         pseudopotential[func][rel[0]][pawus[0]] = {
-                            "filename": psfile, "cutoff": ecutwfc, "dual": 8.0, "wfc": wfc, "cite": f"100{pawus[0]}", "resource": "PSLibrary100"}
+                            "filename": psfile, "cutoff": ecutwfc, "dual": 8.0, "valence": valence, "cite": f"100{pawus[0]}", "resource": "PSLibrary100"}
         else:
             # PAW
             for func in ["PBE", "PBEsol"]:
@@ -276,7 +278,7 @@ if __name__ == "__main__":
                         f"./SSSP_{func}_pseudos") if re.split("[._-]", s)[0].lower() == f"{element}".lower()][0]
                     shutil.copy(
                         f"./SSSP_{func}_pseudos/{psfile}", "./pseudos/")
-                    wfc, ecutwfc = pslib_read(f"./pseudos/{psfile}")
+                    valence, ecutwfc = pslib_read(f"./pseudos/{psfile}")
                     ecutwfc = ssspp[element]["cutoff"]
                     cite = ssspp[element]["pseudopotential"]
                     resource = "SSSP"
@@ -287,21 +289,21 @@ if __name__ == "__main__":
                     psfile = max(candidates, key=len)
                     shutil.copy(
                         f"./pslib{pslib_ver_dict[element]}/{psfile}", "./pseudos/")
-                    wfc, ecutwfc = pslib_read(f"./pseudos/{psfile}")
+                    valence, ecutwfc = pslib_read(f"./pseudos/{psfile}")
                     cite = pslib_ver_dict[element] + "PAW"
                     resource = "PSLibrary" + \
                         pslib_ver_dict[element] if (
                             element not in ["Co", "In", "Mn"]) else "Readey-to-use"
                 dual = 8.0 if not (element in ["Mn", "Fe", "Co"]) else 12.0
                 pseudopotential[func]["sr"]["PAW"] = {
-                    "filename": psfile, "cutoff": ecutwfc, "dual": dual, "wfc": wfc, "cite": cite, "resource": resource}
+                    "filename": psfile, "cutoff": ecutwfc, "dual": dual, "valence": valence, "cite": cite, "resource": resource}
                 # fr
                 psfile_fr = psfile.replace(
                     f"{element}.pbe", f"{element}.rel-pbe")
                 shutil.copy(
                     list(Path("./").glob(f"pslib[0-9][0-9][0-9]/{psfile_fr[:-4]}*"))[0], "./pseudos/")
                 pseudopotential[func]["fr"]["PAW"] = {
-                    "filename": psfile_fr, "cutoff": ecutwfc, "dual": dual, "wfc": wfc, "cite": cite, "resource": resource}
+                    "filename": psfile_fr, "cutoff": ecutwfc, "dual": dual, "valence": valence, "cite": cite, "resource": resource}
             # US
             for func in ["PBE", "PBEsol"]:
                 # sr
@@ -314,9 +316,9 @@ if __name__ == "__main__":
                     cite = ssspp[element]["pseudopotential"]
                     resource = "SSSP"
                     if "GBRV" in cite:
-                        wfc = gbrv_read(f"./pseudos/{psfile}")
+                        valence = gbrv_read(f"./pseudos/{psfile}")
                     else:
-                        wfc = pslib_read(f"./pseudos/{psfile}")[0]
+                        valence = pslib_read(f"./pseudos/{psfile}")[0]
                 # Po, At, Noble gas
                 elif Element(element).Z in [2, 10, 18, 36, 54, 84, 85, 86]:
                     candidates = [p.name for p in Path(
@@ -325,7 +327,7 @@ if __name__ == "__main__":
                     psfile = max(candidates, key=len)
                     shutil.copy(
                         f"./pslib{pslib_ver_dict[element]}/{psfile}", "./pseudos/")
-                    wfc, ecutwfc = pslib_read(f"./pseudos/{psfile}")
+                    valence, ecutwfc = pslib_read(f"./pseudos/{psfile}")
                     cite = pslib_ver_dict[element] + "US"
                     resource = "PSLibrary" + pslib_ver_dict[element]
                 else:
@@ -338,10 +340,10 @@ if __name__ == "__main__":
                         ssspp[element]["cutoff"] / 2, 40)
                     cite = "GBRV-1.5"
                     resource = "GBRV1.5"
-                    wfc = gbrv_read(f"./pseudos/{psfile}")
+                    valence = gbrv_read(f"./pseudos/{psfile}")
                 dual = 8.0 if not (element in ["Mn", "Fe", "Co"]) else 12.0
                 pseudopotential[func]["sr"]["US"] = {
-                    "filename": psfile, "cutoff": ecutwfc, "dual": dual, "wfc": wfc, "cite": cite, "resource": resource}
+                    "filename": psfile, "cutoff": ecutwfc, "dual": dual, "valence": valence, "cite": cite, "resource": resource}
                 # fr
                 candidates = [p.name for p in Path(
                     "./pslib" + pslib_ver_dict[element]).glob(f"{element}.{func.lower()}-*rrkjus_*")]
@@ -349,13 +351,13 @@ if __name__ == "__main__":
                 psfile = max(candidates, key=len)
                 shutil.copy(
                     f"./pslib{pslib_ver_dict[element]}/{psfile}", "./pseudos/")
-                wfc, ecutwfc = pslib_read(f"./pseudos/{psfile}")
+                valence, ecutwfc = pslib_read(f"./pseudos/{psfile}")
                 cite = pslib_ver_dict[element] + "US"
                 resource = "PSLibrary" + \
                     pslib_ver_dict[element] if (
                         element not in ["Co", "In", "Mn"]) else "Readey-to-use"
                 pseudopotential[func]["fr"]["US"] = {
-                    "filename": psfile, "cutoff": ecutwfc, "dual": dual, "wfc": wfc, "cite": cite, "resource": resource}
+                    "filename": psfile, "cutoff": ecutwfc, "dual": dual, "valence": valence, "cite": cite, "resource": resource}
             # ONCV
             # sr PBE
             dual = 4.0
@@ -368,14 +370,14 @@ if __name__ == "__main__":
                 else:
                     psfile = ssspp[element]["filename"]
                     shutil.copy(f"./SSSP_PBE_pseudos/{psfile}", "./pseudos/")
-                wfc = oncv_read(f"./pseudos/{psfile}", element)
+                valence = oncv_read(f"./pseudos/{psfile}", element)
                 ecutwfc = ssspp[element]["cutoff"]
                 resource = "SSSP"
             elif element == "Rn":  # Dojo
                 psfile = "Rn_ONCV_PBE_fr-0.4.dojo.upf"
                 shutil.copy("./nc-fr-04_pbe_stringent_upf/Rn.upf",
                             f"./pseudos/{psfile}")
-                wfc = oncv_read(f"./pseudos/{psfile}", "Rn")
+                valence = oncv_read(f"./pseudos/{psfile}", "Rn")
                 ecutwfc = dojo["pseudos_metadata"]["Rn"]["hints"]["high"]["ecut"]
                 cite = "Dojo"
                 resource = "PseudoDojo0.4"
@@ -386,12 +388,12 @@ if __name__ == "__main__":
                 # take newer
                 shutil.copy(f"{max(candidates)}",
                             f"./pseudos/{psfile}")
-                wfc = oncv_read(f"./pseudos/{psfile}", element)
+                valence = oncv_read(f"./pseudos/{psfile}", element)
                 ecutwfc = dojo["pseudos_metadata"][element]["hints"]["high"]["ecut"]
                 cite = "SG15"
                 resource = "ONCVPSP"
             pseudopotential["PBE"]["sr"]["ONCV"] = {
-                "filename": psfile, "cutoff": ecutwfc, "dual": dual, "wfc": wfc, "cite": cite, "resource": resource}
+                "filename": psfile, "cutoff": ecutwfc, "dual": dual, "valence": valence, "cite": cite, "resource": resource}
             # fr PBE
             if cite == "Dojo":
                 psfile_fr = f"{element}_ONCV_PBE_fr-0.4.dojo.upf"
@@ -404,13 +406,13 @@ if __name__ == "__main__":
                 shutil.copy(f"{max(candidates)}",
                             f"./pseudos/{psfile_fr}")
             pseudopotential["PBE"]["fr"]["ONCV"] = {
-                "filename": psfile_fr, "cutoff": ecutwfc, "dual": dual, "wfc": wfc, "cite": cite, "resource": resource}
+                "filename": psfile_fr, "cutoff": ecutwfc, "dual": dual, "valence": valence, "cite": cite, "resource": resource}
             # sr PBEsol
             if default["pstype"] == "ONCV":
                 psfile = [s for s in os.listdir(
                     f"./SSSP_PBEsol_pseudos") if re.split("[._-]", s)[0].lower() == f"{element}".lower()][0]
                 shutil.copy(f"./SSSP_PBEsol_pseudos/{psfile}", "./pseudos/")
-                wfc = oncv_read(f"./pseudos/{psfile}", element)
+                valence = oncv_read(f"./pseudos/{psfile}", element)
                 ecutwfc = ssspp[element]["cutoff"]
                 cite = ssspp[element]["pseudopotential"]
                 resource = "SSSP"
@@ -418,22 +420,22 @@ if __name__ == "__main__":
                 psfile = f"{element}_ONCV_PBEsol-0.4.dojo.upf"  # rename
                 shutil.copy(
                     f"./nc-sr-04_pbesol_stringent_upf/{element}.upf", f"./pseudos/{psfile}")
-                wfc = oncv_read(f"./pseudos/{psfile}", element)
+                valence = oncv_read(f"./pseudos/{psfile}", element)
                 ecutwfc = dojo["pseudos_metadata"][element]["hints"]["high"]["ecut"]
                 cite = "Dojo"
                 resource = "PseudoDojo0.4"
             pseudopotential["PBEsol"]["sr"]["ONCV"] = {
-                "filename": psfile, "cutoff": ecutwfc, "dual": dual, "wfc": wfc, "cite": cite, "resource": resource}
+                "filename": psfile, "cutoff": ecutwfc, "dual": dual, "valence": valence, "cite": cite, "resource": resource}
             # fr PBEsol
             psfile = f"{element}_ONCV_PBEsol_fr-0.4.dojo.upf"
             shutil.copy(
                 f"./nc-fr-04_pbesol_stringent_upf/{element}.upf", f"./pseudos/{psfile}")
-            wfc = oncv_read(f"./pseudos/{psfile}", element)
+            valence = oncv_read(f"./pseudos/{psfile}", element)
             ecutwfc = dojo["pseudos_metadata"][element]["hints"]["high"]["ecut"]
             cite = "Dojo"
             resource = "PseudoDojo0.4"
             pseudopotential["PBEsol"]["fr"]["ONCV"] = {
-                "filename": psfile, "cutoff": ecutwfc, "dual": dual, "wfc": wfc, "cite": cite, "resource": resource}
+                "filename": psfile, "cutoff": ecutwfc, "dual": dual, "valence": valence, "cite": cite, "resource": resource}
         # save to elements
         elements.update(
             {element: {"pseudopotential": pseudopotential, "default": default}})

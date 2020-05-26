@@ -18,6 +18,7 @@ class Matdyn:
         '''
         self.task = task
         self.nk = variables["nk"]
+        self.nq = variables["nq"] if variables else [4, 4, 4]
         # create input file
         self._save_in(env, outpath)
         # run command
@@ -25,17 +26,17 @@ class Matdyn:
 
     def _save_in(self, env, outpath):
         # calculation type
-        base = ["&INPUT", "asr = crystal", "flfrc = 'ph.ifc'"]
+        base = ["&INPUT", "asr = 'crystal'", "flfrc = 'ph.ifc'"]
         if self.task == "phband":
             kpath = [f"{len(env.bandpath)}"] + \
                 [f"{kcoord[0]} {kcoord[1]} {kcoord[2]} 1.0" for kcoord in env.bandpath]
             phband_in = base + ["q_in_band_form = .true.", "/"] + kpath
         elif self.task == "phdos":
-            phdos_in = base + ["dos = .true.", f"nq1 = {self.nq[0] * 2}",
-                               f"nq2 = {self.nq[1] * 2}", f"nq3 = {self.nq[2] * 2}", "/"]
+            phdos_in = base + ["dos = .true.", f"nk1 = {self.nq[0] * 2}",
+                               f"nk2 = {self.nq[1] * 2}", f"nk3 = {self.nq[2] * 2}", "/"]
         elif self.task == "alpha2f":
-            alpha2f_in = base + ["dos = .true.", "la2F = .true.", f"nq1 = {self.nq[0] * 2}",
-                                 f"nq2 = {self.nq[1] * 2}", f"nq3 = {self.nq[2] * 2}", "/"]
+            alpha2f_in = base + ["dos = .true.", "la2F = .true.", f"nk1 = {self.nq[0] * 2}",
+                                 f"nk2 = {self.nq[1] * 2}", f"nk3 = {self.nq[2] * 2}", "/"]
         nline = repr('\n')
         eval(
             f"print(*{self.task}_in, sep={nline}, end={nline}, file=open('{outpath}/{self.task}.in','w'))")

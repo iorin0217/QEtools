@@ -29,13 +29,14 @@ class Env:
         self.init_crystal, self.init_atoms, self.init_spin = structure, atoms, spin_structure
         # variables
         self.functional = variables["functional"] if variables else "PBE"
+        self.pstype = variables["pstype"] if variables else "mix"
         self.reference_distance = variables["reference_distance"] if variables else 0.025
         # elements information
         self.elements, self.lspinorb, self.nspin, self.lda_plus_u, self.ecutwfc, self.ecutrho, self.time_reversal = self._set_elements()
         # structure information
         self.crystal, self.atoms, self.spin, self.bvec, self.bandpath, self.klabel, self.bandpath_linear, self.kticks = self._set_structure()
         # extfields & constraints
-        self.extfields = {}
+        self.extfields = {"press": 0}
         self.constraints = {}
 
     def _set_elements(self):
@@ -57,18 +58,14 @@ class Env:
             element = re.match(r"\D+", atom).group()
             SOC = elements_json[element]["default"]["SOC"]
             Hubbard = elements_json[element]["default"]["Hubbard"]
-            pstype = elements_json[element]["default"]["pstype"]
+            pstype = elements_json[element]["default"]["pstype"] if self.pstype == "mix" else self.pstype
             if SOC == "fr":
                 lspinorb = True
                 nspin = 4  # to specify the quantization axis
             if Hubbard:
                 lda_plus_u = True
             pseudo = elements_json[element]["pseudopotential"][self.functional][SOC][pstype]
-            '''TODO:valence
-            elements = {"pseudofile": pseudo["filename"], "valence": pseudo["valence"]
-                        "Hubbard": Hubbard, "starting_magnetization": 0}
-            '''
-            elements[atom] = {"pseudofile": pseudo["filename"],
+            elements[atom] = {"pseudofile": pseudo["filename"], "valence": pseudo["valence"],
                               "Hubbard": Hubbard, "starting_magnetization": 0}
             ecutwfc = max(ecutwfc, pseudo["cutoff"])
             ecutrho = max(ecutrho, pseudo["cutoff"] * pseudo["dual"])

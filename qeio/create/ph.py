@@ -18,7 +18,7 @@ class PH:
         # check the calc type
         self.functional = variables['functional'] if variables else 'PBE'
         self.pstype = variables['pstype'] if variables else 'US'
-        self.lspinorb = env.lspinrob
+        self.lspinorb = env.lspinorb
         self.lda_plus_u = env.lda_plus_u
         # TODO : validate calc type
         # &INPUTPH basic
@@ -45,7 +45,7 @@ class PH:
                 ph_in = ["phonon"] + base
         elif self.task == "elph":
             if self.occupations == "tetrahedra_opt":
-                elph_in = ["electron-phonon"] + base + ["lshift_q = .true.", "electron_phonon = 'lambda_tetra",
+                elph_in = ["electron-phonon"] + base + ["lshift_q = .true.", "electron_phonon = 'lambda_tetra'",
                                                         f"nk1 = {self.nk[0] * 2}", f"nk2 = {self.nk[1] * 2}", f"nk3 = {self.nk[2] * 2}", "/"] + ["&INPUTa2F", f"nfreq = {self.nfreq}", "/"]
             else:
                 elph_in = ["electron-phonon"] + base + \

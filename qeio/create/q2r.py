@@ -24,11 +24,11 @@ class Q2R:
         self.command = [["q2r.x", " -in q2r.in | tee q2r.out"]]
 
     def _save_in(self, outpath):
-        # calculation type
+        # task type
         base = ["&INPUT", "fildyn = 'ph.dyn'",
                 "flfrc = 'ph.ifc'", "zasr = 'crystal'"]
         if self.task == "ph":
             q2r_in = base + ["/"]
-        elif self.calculation == "elph":
+        elif self.task == "elph":
             q2r_in = base + ["la2F = .true.", "/"]
         print(*q2r_in, sep='\n', end='\n', file=open(f'{outpath}/q2r.in', 'w'))
