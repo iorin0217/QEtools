@@ -250,3 +250,55 @@ class Env:
     def from_xml(cls, xmlfile):
         # TODO : implement
         pass
+
+
+'''
+if cell[0]==cell[1] and cell[0]==cell[2] and cell[3]==90.0 and cell[4]==90.0 and cell[5]==90.0:
+	# cubic ibrav could be 1 or 2 or 3
+	file2.write('    ' + 'ibrav= 1 ,\n')
+	file2.write('    ' + 'celldm(1) = ' + str('%02.8f' % celldm1) + ' \n')
+elif cell[0]==cell[1] and cell[0]==cell[2] and cell[3]!=90.0 and cell[3]==cell[4] and cell[3]==cell[5]:
+	# trigonal ibrav = 5
+	file2.write('    ' + 'ibrav= 5 ,\n')
+	file2.write('    ' + 'celldm(1) = ' + str('%02.8f' % celldm1) + ' ,\n')
+	file2.write('    ' + 'celldm(4) = ' + str('%01.8f' % celldm4) + ' ,\n')
+elif cell[0]==cell[1] and cell[0]!=cell[2] and cell[3]==90.0 and cell[4]==90.0 and cell[5]==90.0:
+	# tetragonal ibrav = 6 or 7
+	file2.write('    ' + 'ibrav= 6 ,\n')
+	file2.write('    ' + 'celldm(1) = ' + str('%02.8f' % celldm1) + ' ,\n')
+	file2.write('    ' + 'celldm(3) = ' + str('%01.8f' % celldm3) + ' ,\n')
+elif cell[0]==cell[1] and cell[0]!=cell[2] and cell[3]==90.0 and cell[4]==90.0 and cell[5]==120.0:
+	# hexagonal or trigonal ibrav = 4
+	file2.write('    ' + 'ibrav= 4 ,\n')
+	file2.write('    ' + 'celldm(1) = ' + str('%02.8f' % celldm1) + ' ,\n')
+	file2.write('    ' + 'celldm(3) = ' + str(celldm3) + ' ,\n')
+elif cell[3]==90.0 and cell[4]==90.0 and cell[5]==90.0:
+	# orthorhombic ibrav = 8,9,10,11
+	file2.write('    ' + 'ibrav= 8 ,\n')
+	file2.write('    ' + 'celldm(1) = ' + str('%02.8f' % celldm1) + ' ,\n')
+	file2.write('    ' + 'celldm(2) = ' + str('%02.8f' % celldm2) + ' ,\n')
+	file2.write('    ' + 'celldm(3) = ' + str('%02.8f' % celldm3) + ' ,\n')
+elif cell[3]==90.0 and cell[4]!=90.0 and cell[5]==90.0:
+	# monoclinic ibrav = 12,-12,13 unique b-axis
+	file2.write('    ' + 'ibrav= -12 ,\n')
+	file2.write('    ' + 'celldm(1) = ' + str('%02.8f' % celldm1) + ' ,\n')
+	file2.write('    ' + 'celldm(2) = ' + str('%02.8f' % celldm2) + ' ,\n')
+	file2.write('    ' + 'celldm(3) = ' + str('%02.8f' % celldm3) + ' ,\n')
+	file2.write('    ' + 'celldm(5) = ' + str('%02.8f' % celldm5) + ' ,\n')
+elif cell[3]==90.0 and cell[4]==90.0 and cell[5]!=90.0:
+	# monoclinic ibrav = 12,13 unique c-axis
+	file2.write('    ' + 'ibrav= 12 ,\n')
+	file2.write('    ' + 'celldm(1) = ' + str('%02.8f' % celldm1) + ' ,\n')
+	file2.write('    ' + 'celldm(2) = ' + str('%02.8f' % celldm2) + ' ,\n')
+	file2.write('    ' + 'celldm(3) = ' + str('%02.8f' % celldm3) + ' ,\n')
+	file2.write('    ' + 'celldm(4) = ' + str('%02.8f' % celldm6) + ' ,\n')
+else:
+	# triclinic ibrav = 14
+	file2.write('    ' + 'ibrav= 14 ,\n')
+	file2.write('    ' + 'celldm(1) = ' + str('%02.8f' % celldm1) + ' ,\n')
+	file2.write('    ' + 'celldm(2) = ' + str('%02.8f' % celldm2) + ' ,\n')
+	file2.write('    ' + 'celldm(3) = ' + str('%02.8f' % celldm3) + ' ,\n')
+	file2.write('    ' + 'celldm(4) = ' + str('%02.8f' % celldm4) + ' ,\n')
+	file2.write('    ' + 'celldm(5) = ' + str('%02.8f' % celldm5) + ' ,\n')
+	file2.write('    ' + 'celldm(6) = ' + str('%02.8f' % celldm6) + ' ,\n')
+'''
